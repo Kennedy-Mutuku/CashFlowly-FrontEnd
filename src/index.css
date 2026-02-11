@@ -74,8 +74,8 @@ a {
 }
 
 .input-group {
-  margin-bottom: 0.5rem;
-  /* Even closer */
+  margin-bottom: 0.75rem;
+  /* Balanced vertical spacing */
 }
 
 .input-group label {
@@ -92,8 +92,8 @@ a {
 .input-group select,
 .input-group textarea {
   width: 100%;
-  padding: 0.4rem 0.6rem;
-  /* More compact */
+  padding: 0.55rem 0.8rem;
+  /* Professional breathability */
   background: #fdfdfd;
   border: 1px solid var(--border);
   border-radius: 0;
@@ -111,7 +111,8 @@ a {
 .card {
   background: var(--card-bg);
   border-radius: 0;
-  padding: 1rem;
+  padding: 1.5rem;
+  /* Professional padding */
   border: 1px solid var(--border);
 }
 

@@ -93,8 +93,8 @@ const ProfileDrawer = ({ isOpen, onClose }) => {
                         <h2 style={{ fontSize: '1.1rem', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '-0.02em', color: '#0f172a' }}>Account Settings</h2>
                         <p style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '600' }}>Manage your professional profile</p>
                     </div>
-                    <button onClick={onClose} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', color: '#64748b', padding: '0.4rem', cursor: 'pointer' }}>
-                        <X size={18} />
+                    <button onClick={onClose} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', color: '#64748b', padding: '0.5rem', cursor: 'pointer' }}>
+                        <X size={20} />
                     </button>
                 </div>
 
@@ -136,8 +136,8 @@ const ProfileDrawer = ({ isOpen, onClose }) => {
                                 <div className="input-group">
                                     <label>Phone Number</label>
                                     <div style={{ position: 'relative' }}>
-                                        <Phone size={13} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
-                                        <input name="phoneNumber" type="text" value={formData.phoneNumber} onChange={handleChange} style={{ paddingLeft: '2.2rem' }} required />
+                                        <Phone size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+                                        <input name="phoneNumber" type="text" value={formData.phoneNumber} onChange={handleChange} style={{ paddingLeft: '2.5rem' }} required />
                                     </div>
                                 </div>
 
@@ -201,9 +201,9 @@ const ProfileDrawer = ({ isOpen, onClose }) => {
                             </section>
                         </div>
 
-                        <div style={{ marginTop: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                            <button type="submit" disabled={loading} className="btn btn-primary" style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', background: '#0f172a', color: '#fff', padding: '0.8rem', fontWeight: '800', letterSpacing: '0.05em', fontSize: '0.85rem' }}>
-                                <Save size={16} /> {loading ? 'SAVING...' : 'SAVE CHANGES'}
+                        <div style={{ marginTop: '2rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                            <button type="submit" disabled={loading} className="btn btn-primary" style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.6rem', background: '#0f172a', color: '#fff', padding: '1rem', fontWeight: '800', letterSpacing: '0.05em', fontSize: '0.9rem' }}>
+                                <Save size={18} /> {loading ? 'SAVING...' : 'SAVE CHANGES'}
                             </button>
                             <button
                                 type="button"
@@ -214,7 +214,7 @@ const ProfileDrawer = ({ isOpen, onClose }) => {
                                 className="btn"
                                 style={{
                                     width: '100%',
-                                    padding: '0.7rem',
+                                    padding: '0.8rem',
                                     background: '#fef2f2',
                                     color: '#dc2626',
                                     fontWeight: '800',
@@ -223,11 +223,11 @@ const ProfileDrawer = ({ isOpen, onClose }) => {
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
-                                    gap: '0.5rem',
-                                    fontSize: '0.8rem'
+                                    gap: '0.6rem',
+                                    fontSize: '0.85rem'
                                 }}
                             >
-                                <LogOut size={16} /> LOGOUT
+                                <LogOut size={18} /> LOGOUT
                             </button>
                         </div>
                     </form>
