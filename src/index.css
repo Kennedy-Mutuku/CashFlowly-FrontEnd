@@ -10,6 +10,10 @@
   --danger: #dc2626;
   --warning: #d97706;
   --font-main: 'Inter', system-ui, -apple-system, sans-serif;
+  --grad-primary: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  --grad-success: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+  --grad-danger: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  --grad-info: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
 }
 
 * {
