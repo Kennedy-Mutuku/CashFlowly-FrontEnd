@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import api from '../services/api';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, Smartphone } from 'lucide-react';
+import { parseMpesaMessage } from '../utils/mpesaParser';
 
 const Income = () => {
     const [incomes, setIncomes] = useState([]);
@@ -9,6 +8,7 @@ const Income = () => {
     const [source, setSource] = useState('');
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
     const [description, setDescription] = useState('');
+    const [mpesaText, setMpesaText] = useState('');
 
     useEffect(() => {
         fetchIncomes();
@@ -17,6 +17,19 @@ const Income = () => {
     const fetchIncomes = async () => {
         const { data } = await api.get('/income');
         setIncomes(data);
+    };
+
+    const handleMpesaPaste = (e) => {
+        const text = e.target.value;
+        setMpesaText(text);
+        const parsed = parseMpesaMessage(text);
+        if (parsed) {
+            setAmount(parsed.amount);
+            setSource(parsed.partner);
+            setTitle(parsed.title);
+            setDate(parsed.date);
+            // Optional: clear message after parsing or keep it
+        }
     };
 
     const handleSubmit = async (e) => {
@@ -37,33 +50,49 @@ const Income = () => {
         <div>
             <h2 style={{ marginBottom: '2rem' }}>Cash In Management</h2>
             <div className="grid-responsive">
-                <div className="card">
-                    <h3 style={{ marginBottom: '1.5rem', fontSize: '1.1rem', fontWeight: '800' }}>ADD NEW INCOME</h3>
-                    <form onSubmit={handleSubmit}>
-                        <div className="input-group">
-                            <label style={{ color: '#475569', fontWeight: '600', fontSize: '0.75rem', textTransform: 'uppercase' }}>Amount (Ksh)</label>
-                            <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} required placeholder="0.00" />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                    <div className="card" style={{ border: '2px dashed #e2e8f0', background: '#f8fafc' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+                            <Smartphone size={18} style={{ color: '#2563eb' }} />
+                            <h3 style={{ fontSize: '0.9rem', fontWeight: '800', textTransform: 'uppercase', color: '#0f172a' }}>M-PESA SMART PASTE</h3>
                         </div>
-                        <div className="input-group">
-                            <label style={{ color: '#475569', fontWeight: '600', fontSize: '0.75rem', textTransform: 'uppercase' }}>Title / Item Name</label>
-                            <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} required placeholder="e.g. Monthly Salary" />
-                        </div>
-                        <div className="input-group">
-                            <label style={{ color: '#475569', fontWeight: '600', fontSize: '0.75rem', textTransform: 'uppercase' }}>Source</label>
-                            <input type="text" value={source} onChange={(e) => setSource(e.target.value)} required placeholder="e.g. Salary, Freelance" />
-                        </div>
-                        <div className="input-group">
-                            <label style={{ color: '#475569', fontWeight: '600', fontSize: '0.75rem', textTransform: 'uppercase' }}>Date</label>
-                            <input type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
-                        </div>
-                        <div className="input-group">
-                            <label style={{ color: '#475569', fontWeight: '600', fontSize: '0.75rem', textTransform: 'uppercase' }}>Description (Optional)</label>
-                            <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Add some notes..."></textarea>
-                        </div>
-                        <button type="submit" className="btn btn-primary" style={{ width: '100%', background: '#0f172a', color: '#fff', padding: '0.8rem', marginTop: '0.5rem' }}>
-                            <Plus size={18} /> SAVE INCOME
-                        </button>
-                    </form>
+                        <p style={{ fontSize: '0.75rem', color: '#64748b', marginBottom: '0.75rem', fontWeight: '600' }}>Paste your M-PESA message here to auto-fill the form below.</p>
+                        <textarea
+                            value={mpesaText}
+                            onChange={handleMpesaPaste}
+                            placeholder="e.g. QX72... Confirmed. You have received Ksh 1,000.00 from..."
+                            style={{ height: '80px', fontSize: '0.8rem', border: '1px solid #cbd5e1' }}
+                        ></textarea>
+                    </div>
+
+                    <div className="card">
+                        <h3 style={{ marginBottom: '1.25rem', fontSize: '1rem', fontWeight: '800', color: '#0f172a' }}>ADD NEW INCOME</h3>
+                        <form onSubmit={handleSubmit}>
+                            <div className="input-group">
+                                <label>Amount (Ksh)</label>
+                                <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} required placeholder="0.00" />
+                            </div>
+                            <div className="input-group">
+                                <label>Title / Item Name</label>
+                                <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} required placeholder="e.g. Monthly Salary" />
+                            </div>
+                            <div className="input-group">
+                                <label>Source</label>
+                                <input type="text" value={source} onChange={(e) => setSource(e.target.value)} required placeholder="e.g. Salary, Freelance" />
+                            </div>
+                            <div className="input-group">
+                                <label>Date</label>
+                                <input type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
+                            </div>
+                            <div className="input-group">
+                                <label>Description (Optional)</label>
+                                <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Add some notes..."></textarea>
+                            </div>
+                            <button type="submit" className="btn btn-primary" style={{ width: '100%', background: '#0f172a', color: '#fff', padding: '0.9rem', marginTop: '0.5rem', fontWeight: '800' }}>
+                                <Plus size={18} /> SAVE INCOME
+                            </button>
+                        </form>
+                    </div>
                 </div>
 
                 <div className="card">
