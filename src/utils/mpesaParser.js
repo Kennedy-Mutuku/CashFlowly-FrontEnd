@@ -42,15 +42,29 @@ export const parseMpesaMessage = (message) => {
         data.partner = partnerMatch ? partnerMatch[1].trim() : 'Unknown Source';
         data.title = `Received from ${data.partner}`;
     } else if (message.toLowerCase().includes('paid to') || message.toLowerCase().includes('sent to')) {
-        data.type = 'expense';
         const partnerMatch = message.match(/(?:paid|sent)\s+to\s+(.+?)\s+on/i) || message.match(/(?:paid|sent)\s+to\s+(.+?)\./i);
-        data.partner = partnerMatch ? partnerMatch[1].trim() : 'Unknown recipient';
-        data.title = `Paid to ${data.partner}`;
+        const partner = partnerMatch ? partnerMatch[1].trim() : 'Unknown recipient';
+
+        data.partner = partner;
+        if (partner.toLowerCase().includes('zidi')) {
+            data.type = 'savings';
+            data.title = `Saved to Zidi`;
+        } else {
+            data.type = 'expense';
+            data.title = `Paid to ${partner}`;
+        }
     } else if (message.toLowerCase().includes('paid for')) {
-        data.type = 'expense';
         const partnerMatch = message.match(/paid\s+for\s+(.+?)\s+on/i) || message.match(/paid\s+for\s+(.+?)\./i);
-        data.partner = partnerMatch ? partnerMatch[1].trim() : 'Services';
-        data.title = `Payment for ${data.partner}`;
+        const partner = partnerMatch ? partnerMatch[1].trim() : 'Services';
+        data.partner = partner;
+
+        if (partner.toLowerCase().includes('zidi')) {
+            data.type = 'savings';
+            data.title = `Saved to Zidi`;
+        } else {
+            data.type = 'expense';
+            data.title = `Payment for ${partner}`;
+        }
     }
 
     // Extract Date (e.g., 11/2/26 or 2026-02-11)

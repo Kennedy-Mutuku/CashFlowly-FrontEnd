@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
-import { Plus, Trash2, Smartphone } from 'lucide-react';
+import { Plus, Trash2, Smartphone, Target } from 'lucide-react';
 import { parseMpesaMessage } from '../utils/mpesaParser';
 
 const Income = () => {
@@ -88,6 +88,29 @@ const Income = () => {
                             style={{ height: '80px', fontSize: '0.8rem', border: '1px solid #cbd5e1' }}
                         ></textarea>
                     </div>
+
+                    {amount > 0 && (
+                        <div className="card" style={{ background: '#ecfdf5', border: '1px solid #10b981', marginBottom: '1rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                                <Target size={18} color="#059669" />
+                                <h4 style={{ fontSize: '0.8rem', fontWeight: '900', color: '#064e3b', textTransform: 'uppercase' }}>Savings Recommendation</h4>
+                            </div>
+                            <p style={{ fontSize: '0.85rem', color: '#065f46', fontWeight: '600', lineHeight: '1.4' }}>
+                                Based on the 20% rule, we recommend saving <span style={{ fontWeight: '900' }}>Ksh {(amount * 0.2).toLocaleString()}</span> for your future.
+                            </p>
+                            <div style={{ marginTop: '1rem', borderTop: '1px solid #a7f3d0', paddingTop: '0.75rem' }}>
+                                <p style={{ fontSize: '0.7rem', color: '#047857', fontWeight: '700', marginBottom: '0.5rem' }}>USE ZIDI TO SAVE SECURELY:</p>
+                                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                    <button
+                                        onClick={() => alert(`Instructions: \n1. Go to M-PESA \n2. Send Ksh ${(amount * 0.2).toLocaleString()} to Zidi \n3. Paste the confirmation message in 'Savings' page.`)}
+                                        style={{ flex: 1, padding: '0.5rem', fontSize: '0.7rem', fontWeight: '900', background: '#059669', color: '#fff', border: 'none' }}
+                                    >
+                                        SAVE NOW WITH ZIDI
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
                     <div className="card">
                         <h3 style={{ marginBottom: '1.25rem', fontSize: '1rem', fontWeight: '800', color: '#0f172a' }}>ADD NEW INCOME</h3>
