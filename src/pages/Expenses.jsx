@@ -1,3 +1,5 @@
+import React, { useState, useEffect } from 'react';
+import api from '../services/api';
 import { Plus, Trash2, Smartphone } from 'lucide-react';
 import { parseMpesaMessage } from '../utils/mpesaParser';
 
