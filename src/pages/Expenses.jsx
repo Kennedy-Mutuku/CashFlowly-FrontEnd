@@ -64,8 +64,8 @@ const Expenses = () => {
             alert('Expense saved successfully!');
         } catch (err) {
             console.error(err);
-            if (err.response?.data?.message?.includes('duplicate key') || err.response?.status === 400) {
-                alert('This transaction has already been recorded.');
+            if (err.response?.data?.message?.includes('duplicate key') || err.response?.data?.message?.includes('E11000') || err.response?.status === 400) {
+                alert('This transaction has already been recorded in your history.');
             } else {
                 alert('Failed to add expense');
             }

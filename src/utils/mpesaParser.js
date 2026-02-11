@@ -23,9 +23,21 @@ export const parseMpesaMessage = (message) => {
     }
 
     // Extract Time (e.g., 8:44 AM or 20:44)
-    const timeMatch = message.match(/(\d{1,2}:\d{2}\s?(?:AM|PM)?)/i);
+    const timeMatch = message.match(/(\d{1,2}:\d{2})\s?(AM|PM)?/i);
     if (timeMatch) {
-        data.time = timeMatch[1].trim();
+        let timeStr = timeMatch[1];
+        let meridian = timeMatch[2];
+        let [hours, minutes] = timeStr.split(':');
+
+        if (meridian) {
+            meridian = meridian.toUpperCase();
+            if (meridian === 'PM' && hours !== '12') {
+                hours = (parseInt(hours) + 12).toString();
+            } else if (meridian === 'AM' && hours === '12') {
+                hours = '00';
+            }
+        }
+        data.time = `${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}`;
     }
 
     // Extract Amount (e.g., Ksh1,000.00 or Ksh 1,000.00)
