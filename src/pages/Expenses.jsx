@@ -5,6 +5,7 @@ import { Plus, Trash2 } from 'lucide-react';
 const Expenses = () => {
     const [expenses, setExpenses] = useState([]);
     const [amount, setAmount] = useState('');
+    const [title, setTitle] = useState('');
     const [category, setCategory] = useState('Food');
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
     const [description, setDescription] = useState('');
@@ -23,8 +24,9 @@ const Expenses = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            await api.post('/expenses', { amount, category, date, description });
+            await api.post('/expenses', { amount, category, date, description, title });
             setAmount('');
+            setTitle('');
             setDescription('');
             fetchExpenses();
         } catch (err) {
@@ -34,55 +36,61 @@ const Expenses = () => {
 
     return (
         <div>
-            <h2 style={{ marginBottom: '2rem' }}>Expense Management</h2>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '2rem' }}>
-                <div className="card glass">
-                    <h3 style={{ marginBottom: '1rem' }}>Record Expense</h3>
+            <h2 style={{ marginBottom: '2rem' }}>Cash Out Management</h2>
+            <div className="grid-responsive">
+                <div className="card">
+                    <h3 style={{ marginBottom: '1.5rem', fontSize: '1.1rem', fontWeight: '800' }}>RECORD EXPENSE</h3>
                     <form onSubmit={handleSubmit}>
                         <div className="input-group">
-                            <label>Amount</label>
-                            <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} required />
+                            <label style={{ color: '#475569', fontWeight: '600', fontSize: '0.75rem', textTransform: 'uppercase' }}>Amount (Ksh)</label>
+                            <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} required placeholder="0.00" />
                         </div>
                         <div className="input-group">
-                            <label>Category</label>
+                            <label style={{ color: '#475569', fontWeight: '600', fontSize: '0.75rem', textTransform: 'uppercase' }}>Item Name</label>
+                            <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} required placeholder="e.g. Pizza, Movie Ticket" />
+                        </div>
+                        <div className="input-group">
+                            <label style={{ color: '#475569', fontWeight: '600', fontSize: '0.75rem', textTransform: 'uppercase' }}>Category</label>
                             <select value={category} onChange={(e) => setCategory(e.target.value)} required>
                                 {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                             </select>
                         </div>
                         <div className="input-group">
-                            <label>Date</label>
+                            <label style={{ color: '#475569', fontWeight: '600', fontSize: '0.75rem', textTransform: 'uppercase' }}>Date</label>
                             <input type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
                         </div>
                         <div className="input-group">
-                            <label>Description (Optional)</label>
-                            <textarea value={description} onChange={(e) => setDescription(e.target.value)}></textarea>
+                            <label style={{ color: '#475569', fontWeight: '600', fontSize: '0.75rem', textTransform: 'uppercase' }}>Description (Optional)</label>
+                            <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Add some notes..."></textarea>
                         </div>
-                        <button type="submit" className="btn btn-primary" style={{ width: '100%', background: 'var(--danger)' }}>
-                            <Plus size={18} /> Add Expense
+                        <button type="submit" className="btn btn-primary" style={{ width: '100%', background: '#dc2626', color: '#fff', padding: '0.8rem', marginTop: '0.5rem' }}>
+                            <Plus size={18} /> SAVE EXPENSE
                         </button>
                     </form>
                 </div>
 
-                <div className="card glass">
-                    <h3 style={{ marginBottom: '1rem' }}>Expense History</h3>
+                <div className="card">
+                    <h3 style={{ marginBottom: '1.5rem', fontSize: '1.1rem', fontWeight: '800' }}>EXPENSE HISTORY</h3>
                     <div style={{ maxHeight: '500px', overflowY: 'auto' }}>
                         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                             <thead>
-                                <tr style={{ borderBottom: '1px solid var(--border)', textAlign: 'left' }}>
-                                    <th style={{ padding: '1rem 0' }}>Date</th>
-                                    <th>Category</th>
-                                    <th>Amount</th>
-                                    <th style={{ textAlign: 'right' }}>Actions</th>
+                                <tr style={{ borderBottom: '2px solid #f1f5f9', textAlign: 'left' }}>
+                                    <th style={{ padding: '0.75rem 0', fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase' }}>Date</th>
+                                    <th style={{ fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase' }}>Item Name</th>
+                                    <th style={{ fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase' }}>Category</th>
+                                    <th style={{ fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase' }}>Amount</th>
+                                    <th style={{ textAlign: 'right', fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase' }}>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {expenses.map((item) => (
-                                    <tr key={item._id} style={{ borderBottom: '1px solid var(--border)' }}>
-                                        <td style={{ padding: '1rem 0' }}>{new Date(item.date).toLocaleDateString()}</td>
-                                        <td><span style={{ padding: '0.2rem 0.6rem', background: 'var(--border)', borderRadius: '4px', fontSize: '0.8rem' }}>{item.category}</span></td>
-                                        <td style={{ color: 'var(--danger)', fontWeight: 'bold' }}>-${item.amount}</td>
+                                    <tr key={item._id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                                        <td style={{ padding: '1rem 0', fontSize: '0.85rem' }}>{new Date(item.date).toLocaleDateString()}</td>
+                                        <td style={{ fontWeight: '700', fontSize: '0.85rem' }}>{item.title}</td>
+                                        <td style={{ fontSize: '0.85rem' }}><span style={{ padding: '0.2rem 0.6rem', border: '1px solid #e2e8f0', background: '#f8fafc', fontWeight: '600', color: '#64748b', fontSize: '0.75rem' }}>{item.category.toUpperCase()}</span></td>
+                                        <td style={{ color: '#dc2626', fontWeight: '800', fontSize: '0.85rem' }}>-Ksh {item.amount.toLocaleString()}</td>
                                         <td style={{ textAlign: 'right' }}>
-                                            <button style={{ background: 'transparent', color: 'var(--text-muted)', border: 'none' }}>
+                                            <button style={{ background: 'transparent', color: '#94a3b8', border: 'none', cursor: 'pointer' }}>
                                                 <Trash2 size={16} />
                                             </button>
                                         </td>

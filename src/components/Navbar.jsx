@@ -1,37 +1,167 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LayoutDashboard, Receipt, TrendingUp, Target, LogOut, Wallet } from 'lucide-react';
+import { LayoutDashboard, Receipt, TrendingUp, Target, LogOut, Wallet, Menu, X, Users, User } from 'lucide-react';
+import ProfileDrawer from './ProfileDrawer';
 
 const Navbar = () => {
     const { user, logout } = useAuth();
     const navigate = useNavigate();
+    const [isOpen, setIsOpen] = useState(false);
+    const [isProfileOpen, setIsProfileOpen] = useState(false);
 
     const handleLogout = () => {
         logout();
+        setIsOpen(false);
         navigate('/login');
     };
 
+    const navItems = [
+        { label: 'Dashboard', path: '/', icon: <LayoutDashboard size={18} /> },
+        { label: 'Cash In', path: '/income', icon: <TrendingUp size={18} /> },
+        { label: 'Cash Out', path: '/expenses', icon: <Receipt size={18} /> },
+        { label: 'Budget', path: '/budget', icon: <Wallet size={18} /> },
+        { label: 'Savings', path: '/savings', icon: <Target size={18} /> },
+        { label: 'Debts', path: '/debts', icon: <Users size={18} /> },
+    ];
+
     return (
-        <nav className="glass" style={{ marginBottom: '2rem', padding: '1rem 0' }}>
+        <nav style={{
+            marginBottom: '2rem',
+            padding: '1.25rem 0',
+            position: 'sticky',
+            top: 0,
+            zIndex: 1000,
+            background: '#fff',
+            borderBottom: '1px solid #e2e8f0',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+        }}>
             <div className="container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 'bold', fontSize: '1.25rem' }}>
-                    <Wallet color="var(--primary)" />
-                    CashFlowly
+                <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontWeight: '800', fontSize: '1.4rem', color: '#0f172a', letterSpacing: '-0.025em' }}>
+                    <Wallet color="#2563eb" size={24} strokeWidth={2.5} />
+                    CASHFLOWLY
                 </Link>
-                <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center' }}>
-                    <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}><LayoutDashboard size={18} /> Dashboard</Link>
-                    <Link to="/income" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}><TrendingUp size={18} /> Income</Link>
-                    <Link to="/expenses" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}><Receipt size={18} /> Expenses</Link>
-                    <Link to="/budget" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}><Wallet size={18} /> Budget</Link>
-                    <Link to="/savings" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}><Target size={18} /> Savings</Link>
-                    <span style={{ color: 'var(--text-muted)' }}>|</span>
-                    <span style={{ fontWeight: '500' }}>{user?.name}</span>
-                    <button onClick={handleLogout} className="btn" style={{ background: 'transparent', color: 'var(--danger)', padding: '0.25rem' }}>
-                        <LogOut size={20} />
-                    </button>
+
+                {/* Desktop Nav */}
+                <div className="nav-links" style={{ display: 'flex', gap: '1.75rem', alignItems: 'center' }}>
+                    {navItems.map((item) => (
+                        <Link key={item.path} to={item.path} style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.4rem',
+                            fontSize: '0.85rem',
+                            fontWeight: '600',
+                            color: '#475569',
+                            textTransform: 'uppercase'
+                        }}>
+                            {React.cloneElement(item.icon, { size: 16 })} {item.label}
+                        </Link>
+                    ))}
+                    <span style={{ color: '#e2e8f0' }}>|</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                        <div
+                            onClick={() => setIsProfileOpen(true)}
+                            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: '700', fontSize: '0.85rem', color: '#0f172a', textDecoration: 'none', cursor: 'pointer' }}
+                        >
+                            <div style={{ padding: '0.4rem', background: '#f1f5f9', color: '#475569', borderRadius: '0' }}>
+                                <User size={16} />
+                            </div>
+                            {user?.name?.toUpperCase()}
+                        </div>
+                        <button onClick={handleLogout} className="btn" style={{
+                            background: '#fef2f2',
+                            color: '#dc2626',
+                            padding: '0.4rem',
+                            borderRadius: '0',
+                            border: '1px solid #fee2e2'
+                        }}>
+                            <LogOut size={18} />
+                        </button>
+                    </div>
                 </div>
+
+                {/* Mobile Toggle */}
+                <button
+                    className="mobile-toggle"
+                    onClick={() => setIsOpen(!isOpen)}
+                    style={{ display: 'none', background: 'transparent', border: 'none', color: '#0f172a', cursor: 'pointer' }}
+                >
+                    {isOpen ? <X size={24} /> : <Menu size={24} />}
+                </button>
             </div>
+
+            {/* Mobile Menu */}
+            {isOpen && (
+                <div className="mobile-menu" style={{
+                    position: 'absolute',
+                    top: '100%',
+                    left: 0,
+                    width: '100%',
+                    padding: '1rem',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.5rem',
+                    background: '#fff',
+                    borderBottom: '1px solid #e2e8f0',
+                    boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)'
+                }}>
+                    {navItems.map((item) => (
+                        <Link
+                            key={item.path}
+                            to={item.path}
+                            onClick={() => setIsOpen(false)}
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.75rem',
+                                padding: '1rem',
+                                background: '#f8fafc',
+                                color: '#0f172a',
+                                fontWeight: '700',
+                                fontSize: '0.9rem',
+                                textTransform: 'uppercase'
+                            }}
+                        >
+                            {item.icon} {item.label}
+                        </Link>
+                    ))}
+                    <div
+                        onClick={() => {
+                            setIsOpen(false);
+                            setIsProfileOpen(true);
+                        }}
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.75rem',
+                            padding: '1rem',
+                            background: '#eff6ff',
+                            color: '#2563eb',
+                            fontWeight: '700',
+                            fontSize: '0.9rem',
+                            textTransform: 'uppercase',
+                            borderLeft: '4px solid #2563eb',
+                            cursor: 'pointer'
+                        }}
+                    >
+                        <User size={18} /> MY PROFILE
+                    </div>
+                    <div style={{ borderTop: '1px solid #f1f5f9', marginTop: '0.5rem', paddingTop: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontWeight: '800', fontSize: '0.9rem' }}>{user?.name?.toUpperCase()}</span>
+                        <button onClick={handleLogout} className="btn" style={{ background: '#fef2f2', color: '#dc2626', fontSize: '0.8rem', fontWeight: '700' }}>
+                            LOGOUT
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            <style>{`
+                @media (max-width: 768px) {
+                    .nav-links { display: none !important; }
+                    .mobile-toggle { display: block !important; }
+                }
+            `}</style>
+            <ProfileDrawer isOpen={isProfileOpen} onClose={() => setIsProfileOpen(false)} />
         </nav>
     );
 };

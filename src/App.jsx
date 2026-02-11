@@ -8,6 +8,7 @@ import Income from './pages/Income';
 import Expenses from './pages/Expenses';
 import Budget from './pages/Budget';
 import Savings from './pages/Savings';
+import Debts from './pages/Debts';
 import Navbar from './components/Navbar';
 import './index.css';
 
@@ -39,6 +40,7 @@ function App() {
                         <Route path="/expenses" element={<Expenses />} />
                         <Route path="/budget" element={<Budget />} />
                         <Route path="/savings" element={<Savings />} />
+                        <Route path="/debts" element={<Debts />} />
                       </Routes>
                     </main>
                   </>
