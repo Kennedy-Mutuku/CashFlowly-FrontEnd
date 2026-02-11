@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { LayoutDashboard, Receipt, TrendingUp, Target, LogOut, Wallet, Menu, X, Users, User } from 'lucide-react';
 import ProfileDrawer from './ProfileDrawer';
@@ -7,6 +7,7 @@ import ProfileDrawer from './ProfileDrawer';
 const Navbar = () => {
     const { user, logout } = useAuth();
     const navigate = useNavigate();
+    const location = useLocation();
     const [isOpen, setIsOpen] = useState(false);
     const [isProfileOpen, setIsProfileOpen] = useState(false);
 
@@ -37,26 +38,37 @@ const Navbar = () => {
             boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
         }}>
             <div className="container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontWeight: '800', fontSize: '1.4rem', color: '#0f172a', letterSpacing: '-0.025em' }}>
-                    <Wallet color="#2563eb" size={24} strokeWidth={2.5} />
-                    CASHFLOWLY
+                <Link to="/" style={{ display: 'flex', flexDirection: 'column', textDecoration: 'none' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontWeight: '800', fontSize: '1.4rem', color: '#0f172a', letterSpacing: '-0.025em' }}>
+                        <Wallet color="#2563eb" size={24} strokeWidth={2.5} />
+                        CASHFLOWLY
+                    </div>
+                    <span style={{ fontSize: '0.55rem', fontWeight: '900', color: '#64748b', letterSpacing: '0.15em', marginTop: '-0.2rem', marginLeft: '2.4rem' }}>
+                        THE 50, 30, 20 RULE
+                    </span>
                 </Link>
 
                 {/* Desktop Nav */}
                 <div className="nav-links" style={{ display: 'flex', gap: '1.75rem', alignItems: 'center' }}>
-                    {navItems.map((item) => (
-                        <Link key={item.path} to={item.path} style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.4rem',
-                            fontSize: '0.85rem',
-                            fontWeight: '600',
-                            color: '#475569',
-                            textTransform: 'uppercase'
-                        }}>
-                            {React.cloneElement(item.icon, { size: 16 })} {item.label}
-                        </Link>
-                    ))}
+                    {navItems.map((item) => {
+                        const isActive = location.pathname === item.path;
+                        return (
+                            <Link key={item.path} to={item.path} style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.4rem',
+                                fontSize: '0.85rem',
+                                fontWeight: isActive ? '900' : '600',
+                                color: isActive ? '#2563eb' : '#475569',
+                                textTransform: 'uppercase',
+                                padding: '0.4rem 0',
+                                borderBottom: isActive ? '2px solid #2563eb' : '2px solid transparent',
+                                transition: 'color 0.2s ease'
+                            }}>
+                                {React.cloneElement(item.icon, { size: 16 })} {item.label}
+                            </Link>
+                        );
+                    })}
                     <span style={{ color: '#e2e8f0' }}>|</span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                         <div
@@ -105,26 +117,30 @@ const Navbar = () => {
                     borderBottom: '1px solid #e2e8f0',
                     boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)'
                 }}>
-                    {navItems.map((item) => (
-                        <Link
-                            key={item.path}
-                            to={item.path}
-                            onClick={() => setIsOpen(false)}
-                            style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '0.75rem',
-                                padding: '1rem',
-                                background: '#f8fafc',
-                                color: '#0f172a',
-                                fontWeight: '700',
-                                fontSize: '0.9rem',
-                                textTransform: 'uppercase'
-                            }}
-                        >
-                            {item.icon} {item.label}
-                        </Link>
-                    ))}
+                    {navItems.map((item) => {
+                        const isActive = location.pathname === item.path;
+                        return (
+                            <Link
+                                key={item.path}
+                                to={item.path}
+                                onClick={() => setIsOpen(false)}
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.75rem',
+                                    padding: '1rem',
+                                    background: isActive ? '#eff6ff' : '#f8fafc',
+                                    color: isActive ? '#2563eb' : '#0f172a',
+                                    fontWeight: '700',
+                                    fontSize: '0.9rem',
+                                    textTransform: 'uppercase',
+                                    borderLeft: isActive ? '4px solid #2563eb' : '4px solid transparent'
+                                }}
+                            >
+                                {React.cloneElement(item.icon, { color: isActive ? '#2563eb' : 'currentColor' })} {item.label}
+                            </Link>
+                        );
+                    })}
                     <div
                         onClick={() => {
                             setIsOpen(false);

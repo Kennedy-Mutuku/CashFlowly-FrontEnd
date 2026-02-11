@@ -8,9 +8,12 @@ const Expenses = () => {
     const [amount, setAmount] = useState('');
     const [title, setTitle] = useState('');
     const [category, setCategory] = useState('Food');
-    const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+    const [date, setDate] = useState(new Date().toLocaleDateString('en-CA', { timeZone: 'Africa/Nairobi' })); // en-CA gives YYYY-MM-DD
     const [description, setDescription] = useState('');
     const [mpesaText, setMpesaText] = useState('');
+    const [paymentMethod, setPaymentMethod] = useState('Cash');
+    const [transactionId, setTransactionId] = useState('');
+    const [time, setTime] = useState(new Date().toLocaleTimeString('en-GB', { timeZone: 'Africa/Nairobi', hour: '2-digit', minute: '2-digit' }));
 
     const categories = ['Food', 'Transport', 'Rent', 'Utilities', 'Entertainment', 'Other'];
 
@@ -31,23 +34,41 @@ const Expenses = () => {
             setAmount(parsed.amount);
             setTitle(parsed.title);
             setDate(parsed.date);
-            // Default category for M-PESA payments if not specified
-            if (parsed.type === 'expense') {
-                setCategory('Other');
-            }
+            setTime(parsed.time);
+            setPaymentMethod('M-PESA');
+            setTransactionId(parsed.transactionId);
+            // Default category for M-PESA payments
+            setCategory('Other');
         }
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            await api.post('/expenses', { amount, category, date, description, title });
+            await api.post('/expenses', {
+                amount,
+                category,
+                date: time ? `${date}T${time}` : date,
+                description,
+                title,
+                paymentMethod,
+                transactionId
+            });
             setAmount('');
             setTitle('');
             setDescription('');
+            setPaymentMethod('Cash');
+            setTransactionId('');
+            setTime('');
             fetchExpenses();
+            alert('Expense saved successfully!');
         } catch (err) {
-            alert('Failed to add expense');
+            console.error(err);
+            if (err.response?.data?.message?.includes('duplicate key') || err.response?.status === 400) {
+                alert('This transaction has already been recorded.');
+            } else {
+                alert('Failed to add expense');
+            }
         }
     };
 
@@ -88,8 +109,11 @@ const Expenses = () => {
                                 </select>
                             </div>
                             <div className="input-group">
-                                <label>Date</label>
-                                <input type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
+                                <label>Date & Time</label>
+                                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                    <input type="date" value={date} onChange={(e) => setDate(e.target.value)} required style={{ flex: 2 }} />
+                                    <input type="text" placeholder="HH:mm" value={time} onChange={(e) => setTime(e.target.value)} style={{ flex: 1 }} />
+                                </div>
                             </div>
                             <div className="input-group">
                                 <label>Description (Optional)</label>
@@ -118,7 +142,9 @@ const Expenses = () => {
                             <tbody>
                                 {expenses.map((item) => (
                                     <tr key={item._id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                                        <td style={{ padding: '1rem 0', fontSize: '0.85rem' }}>{new Date(item.date).toLocaleDateString()}</td>
+                                        <td style={{ padding: '1rem 0', fontSize: '0.85rem' }}>
+                                            {new Date(item.date).toLocaleString('en-GB', { timeZone: 'Africa/Nairobi', dateStyle: 'short', timeStyle: 'short' })}
+                                        </td>
                                         <td style={{ fontWeight: '700', fontSize: '0.85rem' }}>{item.title}</td>
                                         <td style={{ fontSize: '0.85rem' }}><span style={{ padding: '0.2rem 0.6rem', border: '1px solid #e2e8f0', background: '#f8fafc', fontWeight: '600', color: '#64748b', fontSize: '0.75rem' }}>{item.category.toUpperCase()}</span></td>
                                         <td style={{ color: '#dc2626', fontWeight: '800', fontSize: '0.85rem' }}>-Ksh {item.amount.toLocaleString()}</td>

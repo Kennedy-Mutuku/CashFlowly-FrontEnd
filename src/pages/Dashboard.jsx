@@ -14,7 +14,7 @@ ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarEle
 const Dashboard = () => {
     const [report, setReport] = useState(null);
     const [goals, setGoals] = useState([]);
-    const [month, setMonth] = useState(new Date().toISOString().slice(0, 7));
+    const [month, setMonth] = useState(new Date().toLocaleDateString('en-CA', { timeZone: 'Africa/Nairobi' }).slice(0, 7));
     const [mpesaText, setMpesaText] = useState('');
     const [parsedData, setParsedData] = useState(null);
     const [activeSlide, setActiveSlide] = useState(0);
@@ -34,20 +34,35 @@ const Dashboard = () => {
     };
 
     const confirmQuickAdd = async () => {
+        const payload = {
+            title: parsedData.title,
+            amount: parsedData.amount,
+            date: parsedData.time ? `${parsedData.date}T${parsedData.time}` : parsedData.date,
+            description: parsedData.description || '',
+            paymentMethod: 'M-PESA',
+            transactionId: parsedData.transactionId
+        };
+
+        if (parsedData.type === 'income') {
+            payload.source = parsedData.partner;
+        } else {
+            payload.category = parsedData.category || 'Other';
+        }
+
         const endpoint = parsedData.type === 'income' ? '/income' : '/expenses';
         try {
-            await api.post(endpoint, {
-                title: parsedData.title,
-                amount: parsedData.amount,
-                date: parsedData.date,
-                category: 'Other'
-            });
+            await api.post(endpoint, payload);
             setMpesaText('');
             setParsedData(null);
             fetchReport();
             alert('Transaction synchronized successfully!');
         } catch (err) {
-            alert('Failed to sync transaction');
+            console.error(err);
+            if (err.response?.data?.message?.includes('duplicate key') || err.response?.status === 400) {
+                alert('This transaction has already been recorded.');
+            } else {
+                alert('Failed to sync transaction. Please check all fields.');
+            }
         }
     };
 
@@ -202,15 +217,94 @@ const Dashboard = () => {
                         style={{ height: '70px', background: '#fff', fontSize: '0.85rem', padding: '0.8rem', border: '1px solid #e2e8f0' }}
                     />
                     {parsedData && (
-                        <div style={{ marginTop: '1rem', padding: '1rem', background: '#fff', border: `1px solid ${parsedData.type === 'income' ? '#bbf7d0' : '#fee2e2'}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <div>
-                                <span style={{ fontSize: '0.65rem', fontWeight: '800', color: '#94a3b8' }}>{parsedData.type.toUpperCase()} DETECTED</span>
-                                <div style={{ fontSize: '1.1rem', fontWeight: '900', color: parsedData.type === 'income' ? '#16a34a' : '#dc2626' }}>Ksh {parseFloat(parsedData.amount).toLocaleString()}</div>
-                                <div style={{ fontSize: '0.75rem', fontWeight: '700', color: '#64748b' }}>{parsedData.title}</div>
+                        <div style={{ marginTop: '1rem', padding: '1.25rem', background: '#fff', border: `1px solid ${parsedData.type === 'income' ? '#bbf7d0' : '#fee2e2'}`, borderRadius: '4px', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}>
+                            <div style={{ marginBottom: '1rem', borderBottom: '1px solid #f1f5f9', paddingBottom: '0.5rem', display: 'flex', justifyContent: 'space-between' }}>
+                                <span style={{ fontSize: '0.7rem', fontWeight: '800', color: parsedData.type === 'income' ? '#16a34a' : '#dc2626' }}>
+                                    {parsedData.type === 'income' ? '✓ INCOME DETECTED' : '✗ EXPENSE DETECTED'}
+                                </span>
+                                <span style={{ fontSize: '0.65rem', color: '#94a3b8', fontWeight: '700' }}>SYNC PREVIEW</span>
                             </div>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                                <div className="input-group">
+                                    <label style={{ fontSize: '0.65rem', marginBottom: '0.25rem' }}>Amount (Ksh)</label>
+                                    <input
+                                        type="number"
+                                        value={parsedData.amount}
+                                        onChange={(e) => setParsedData({ ...parsedData, amount: e.target.value })}
+                                        style={{ padding: '0.4rem', fontSize: '0.85rem', fontWeight: '800' }}
+                                    />
+                                </div>
+                                <div className="input-group">
+                                    <label style={{ fontSize: '0.65rem', marginBottom: '0.25rem' }}>Date & Time</label>
+                                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                        <input
+                                            type="date"
+                                            value={parsedData.date}
+                                            onChange={(e) => setParsedData({ ...parsedData, date: e.target.value })}
+                                            style={{ padding: '0.4rem', fontSize: '0.85rem', flex: 1.5 }}
+                                        />
+                                        <input
+                                            type="text"
+                                            placeholder="HH:mm"
+                                            value={parsedData.time || ''}
+                                            onChange={(e) => setParsedData({ ...parsedData, time: e.target.value })}
+                                            style={{ padding: '0.4rem', fontSize: '0.85rem', flex: 1 }}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="input-group" style={{ marginBottom: '0.75rem' }}>
+                                <label style={{ fontSize: '0.65rem', marginBottom: '0.25rem' }}>{parsedData.type === 'income' ? 'Source / Partner' : 'Item Name / Recipient'}</label>
+                                <input
+                                    type="text"
+                                    value={parsedData.type === 'income' ? parsedData.partner : parsedData.title}
+                                    onChange={(e) => parsedData.type === 'income' ? setParsedData({ ...parsedData, partner: e.target.value }) : setParsedData({ ...parsedData, title: e.target.value })}
+                                    style={{ padding: '0.4rem', fontSize: '0.8rem', fontWeight: '700' }}
+                                />
+                            </div>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: '0.75rem', marginBottom: '1rem' }}>
+                                {parsedData.type === 'expense' && (
+                                    <div className="input-group">
+                                        <label style={{ fontSize: '0.65rem', marginBottom: '0.25rem' }}>Category</label>
+                                        <select
+                                            value={parsedData.category || 'Other'}
+                                            onChange={(e) => setParsedData({ ...parsedData, category: e.target.value })}
+                                            style={{ padding: '0.4rem', fontSize: '0.8rem' }}
+                                        >
+                                            {['Food', 'Transport', 'Rent', 'Utilities', 'Entertainment', 'Other'].map(cat => (
+                                                <option key={cat} value={cat}>{cat}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                )}
+                                <div className="input-group">
+                                    <label style={{ fontSize: '0.65rem', marginBottom: '0.25rem' }}>Description (Optional)</label>
+                                    <input
+                                        type="text"
+                                        placeholder="Add notes..."
+                                        value={parsedData.description || ''}
+                                        onChange={(e) => setParsedData({ ...parsedData, description: e.target.value })}
+                                        style={{ padding: '0.4rem', fontSize: '0.8rem' }}
+                                    />
+                                </div>
+                            </div>
+
                             <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                <button onClick={confirmQuickAdd} style={{ padding: '0.5rem 1rem', background: '#0f172a', color: '#fff', border: 'none', fontWeight: '800', fontSize: '0.7rem' }}>SYNC NOW</button>
-                                <button onClick={() => setParsedData(null)} style={{ padding: '0.5rem 1rem', background: '#f1f5f9', color: '#64748b', border: 'none', fontWeight: '800', fontSize: '0.7rem' }}>IGNORE</button>
+                                <button
+                                    onClick={confirmQuickAdd}
+                                    style={{ flex: 2, padding: '0.6rem', background: '#0f172a', color: '#fff', border: 'none', fontWeight: '900', fontSize: '0.75rem', cursor: 'pointer' }}
+                                >
+                                    CONFIRM & SYNC
+                                </button>
+                                <button
+                                    onClick={() => setParsedData(null)}
+                                    style={{ flex: 1, padding: '0.6rem', background: '#f1f5f9', color: '#64748b', border: 'none', fontWeight: '800', fontSize: '0.75rem', cursor: 'pointer' }}
+                                >
+                                    CANCEL
+                                </button>
                             </div>
                         </div>
                     )}
