@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LayoutDashboard, Receipt, TrendingUp, Target, LogOut, Wallet, Menu, X, Users, User } from 'lucide-react';
+import { LayoutDashboard, Receipt, TrendingUp, TrendingDown, Target, LogOut, Wallet, Menu, X, Users, User } from 'lucide-react';
 import ProfileDrawer from './ProfileDrawer';
 
 const Navbar = () => {
@@ -20,7 +20,7 @@ const Navbar = () => {
     const navItems = [
         { label: 'Dashboard', path: '/', icon: <LayoutDashboard size={18} /> },
         { label: 'Cash In', path: '/income', icon: <TrendingUp size={18} /> },
-        { label: 'Cash Out', path: '/expenses', icon: <Receipt size={18} /> },
+        { label: 'Cash Out', path: '/expenses', icon: <TrendingDown size={18} /> },
         { label: 'Budget', path: '/budget', icon: <Wallet size={18} /> },
         { label: 'Savings', path: '/savings', icon: <Target size={18} /> },
         { label: 'Debts', path: '/debts', icon: <Users size={18} /> },
@@ -52,6 +52,7 @@ const Navbar = () => {
                 <div className="nav-links" style={{ display: 'flex', gap: '1.75rem', alignItems: 'center' }}>
                     {navItems.map((item) => {
                         const isActive = location.pathname === item.path;
+                        const activeColor = item.label === 'Cash Out' ? '#ef4444' : '#2563eb';
                         return (
                             <Link key={item.path} to={item.path} style={{
                                 display: 'flex',
@@ -59,13 +60,13 @@ const Navbar = () => {
                                 gap: '0.4rem',
                                 fontSize: '0.85rem',
                                 fontWeight: isActive ? '900' : '600',
-                                color: isActive ? '#2563eb' : '#475569',
+                                color: isActive ? activeColor : '#475569',
                                 textTransform: 'uppercase',
                                 padding: '0.4rem 0',
-                                borderBottom: isActive ? '2px solid #2563eb' : '2px solid transparent',
+                                borderBottom: isActive ? `2px solid ${activeColor}` : '2px solid transparent',
                                 transition: 'color 0.2s ease'
                             }}>
-                                {React.cloneElement(item.icon, { size: 16 })} {item.label}
+                                {React.cloneElement(item.icon, { size: 16, color: isActive ? activeColor : 'currentColor' })} {item.label}
                             </Link>
                         );
                     })}
@@ -119,6 +120,8 @@ const Navbar = () => {
                 }}>
                     {navItems.map((item) => {
                         const isActive = location.pathname === item.path;
+                        const activeColor = item.label === 'Cash Out' ? '#ef4444' : '#2563eb';
+                        const activeBg = item.label === 'Cash Out' ? '#fef2f2' : '#eff6ff';
                         return (
                             <Link
                                 key={item.path}
@@ -129,15 +132,15 @@ const Navbar = () => {
                                     alignItems: 'center',
                                     gap: '0.75rem',
                                     padding: '1rem',
-                                    background: isActive ? '#eff6ff' : '#f8fafc',
-                                    color: isActive ? '#2563eb' : '#0f172a',
+                                    background: isActive ? activeBg : '#f8fafc',
+                                    color: isActive ? activeColor : '#0f172a',
                                     fontWeight: '700',
                                     fontSize: '0.9rem',
                                     textTransform: 'uppercase',
-                                    borderLeft: isActive ? '4px solid #2563eb' : '4px solid transparent'
+                                    borderLeft: isActive ? `4px solid ${activeColor}` : '4px solid transparent'
                                 }}
                             >
-                                {React.cloneElement(item.icon, { color: isActive ? '#2563eb' : 'currentColor' })} {item.label}
+                                {React.cloneElement(item.icon, { color: isActive ? activeColor : 'currentColor' })} {item.label}
                             </Link>
                         );
                     })}
