@@ -74,30 +74,32 @@ a {
 }
 
 .input-group {
-  margin-bottom: 0.75rem;
-  /* Closer to each other */
+  margin-bottom: 0.5rem;
+  /* Even closer */
 }
 
 .input-group label {
   display: block;
-  margin-bottom: 0.5rem;
-  font-size: 0.875rem;
+  margin-bottom: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
   color: var(--text-muted);
+  letter-spacing: 0.02em;
 }
 
 .input-group input,
 .input-group select,
 .input-group textarea {
   width: 100%;
-  padding: 0.5rem 0.75rem;
-  /* Thinner */
+  padding: 0.4rem 0.6rem;
+  /* More compact */
   background: #fdfdfd;
   border: 1px solid var(--border);
   border-radius: 0;
-  /* Sharp corners */
   color: var(--text);
   font-family: inherit;
-  font-size: 0.9rem;
+  font-size: 14px;
 }
 
 .input-group input:focus {
@@ -109,8 +111,7 @@ a {
 .card {
   background: var(--card-bg);
   border-radius: 0;
-  /* Sharp corners */
-  padding: 1.25rem;
+  padding: 1rem;
   border: 1px solid var(--border);
 }
 

@@ -83,69 +83,69 @@ const ProfileDrawer = ({ isOpen, onClose }) => {
 
                 {/* Header */}
                 <div style={{
-                    padding: '1.5rem 2rem',
+                    padding: '1rem 1.5rem',
                     borderBottom: '1px solid #f1f5f9',
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center'
                 }}>
                     <div>
-                        <h2 style={{ fontSize: '1.25rem', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '-0.02em', color: '#0f172a' }}>Account Settings</h2>
-                        <p style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: '600' }}>Manage your professional profile</p>
+                        <h2 style={{ fontSize: '1.1rem', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '-0.02em', color: '#0f172a' }}>Account Settings</h2>
+                        <p style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '600' }}>Manage your professional profile</p>
                     </div>
-                    <button onClick={onClose} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', color: '#64748b', padding: '0.5rem', cursor: 'pointer' }}>
-                        <X size={20} />
+                    <button onClick={onClose} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', color: '#64748b', padding: '0.4rem', cursor: 'pointer' }}>
+                        <X size={18} />
                     </button>
                 </div>
 
                 {/* Content */}
-                <div style={{ flex: 1, overflowY: 'auto', padding: '2rem' }}>
+                <div style={{ flex: 1, overflowY: 'auto', padding: '1.5rem' }}>
                     {message && (
-                        <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#15803d', padding: '0.8rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', fontWeight: '600' }}>
-                            <CheckCircle size={18} /> {message}
+                        <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#15803d', padding: '0.6rem 1rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', fontWeight: '600' }}>
+                            <CheckCircle size={16} /> {message}
                         </div>
                     )}
 
                     {error && (
-                        <div style={{ background: '#fef2f2', border: '1px solid #fee2e2', color: '#b91c1c', padding: '0.8rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', fontWeight: '600' }}>
-                            <AlertCircle size={18} /> {error}
+                        <div style={{ background: '#fef2f2', border: '1px solid #fee2e2', color: '#b91c1c', padding: '0.6rem 1rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', fontWeight: '600' }}>
+                            <AlertCircle size={16} /> {error}
                         </div>
                     )}
 
                     <form onSubmit={handleSubmit}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                             <section>
-                                <h3 style={{ fontSize: '0.75rem', fontWeight: '800', marginBottom: '1rem', textTransform: 'uppercase', color: '#94a3b8', letterSpacing: '0.05em' }}>Personal Information</h3>
+                                <h3 style={{ fontSize: '0.7rem', fontWeight: '800', marginBottom: '0.75rem', textTransform: 'uppercase', color: '#94a3b8', letterSpacing: '0.05em' }}>Personal Information</h3>
 
                                 <div className="input-group">
-                                    <label style={{ color: '#475569', fontWeight: '700', fontSize: '0.7rem', textTransform: 'uppercase' }}>Full Name</label>
+                                    <label>Full Name</label>
                                     <div style={{ position: 'relative' }}>
-                                        <User size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
-                                        <input name="name" type="text" value={formData.name} onChange={handleChange} style={{ paddingLeft: '2.5rem', fontSize: '0.9rem' }} required />
+                                        <User size={13} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+                                        <input name="name" type="text" value={formData.name} onChange={handleChange} style={{ paddingLeft: '2.2rem' }} required />
                                     </div>
                                 </div>
 
                                 <div className="input-group">
-                                    <label style={{ color: '#475569', fontWeight: '700', fontSize: '0.7rem', textTransform: 'uppercase' }}>Email (Immutable)</label>
+                                    <label>Email (Immutable)</label>
                                     <div style={{ position: 'relative' }}>
-                                        <Mail size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#cbd5e1' }} />
-                                        <input type="email" value={formData.email} disabled style={{ paddingLeft: '2.5rem', background: '#f8fafc', color: '#94a3b8', fontSize: '0.9rem', cursor: 'not-allowed' }} />
+                                        <Mail size={13} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#cbd5e1' }} />
+                                        <input type="email" value={formData.email} disabled style={{ paddingLeft: '2.2rem', background: '#f8fafc', color: '#94a3b8', cursor: 'not-allowed' }} />
                                     </div>
                                 </div>
 
                                 <div className="input-group">
-                                    <label style={{ color: '#475569', fontWeight: '700', fontSize: '0.7rem', textTransform: 'uppercase' }}>Phone Number</label>
+                                    <label>Phone Number</label>
                                     <div style={{ position: 'relative' }}>
-                                        <Phone size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
-                                        <input name="phoneNumber" type="text" value={formData.phoneNumber} onChange={handleChange} style={{ paddingLeft: '2.5rem', fontSize: '0.9rem' }} required />
+                                        <Phone size={13} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+                                        <input name="phoneNumber" type="text" value={formData.phoneNumber} onChange={handleChange} style={{ paddingLeft: '2.2rem' }} required />
                                     </div>
                                 </div>
 
                                 <div className="input-group">
-                                    <label style={{ color: '#475569', fontWeight: '700', fontSize: '0.7rem', textTransform: 'uppercase' }}>Income Level</label>
+                                    <label>Income Level</label>
                                     <div style={{ position: 'relative' }}>
-                                        <TrendingUp size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
-                                        <select name="incomeLevel" value={formData.incomeLevel} onChange={handleChange} style={{ paddingLeft: '2.5rem', fontSize: '0.9rem' }}>
+                                        <TrendingUp size={13} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+                                        <select name="incomeLevel" value={formData.incomeLevel} onChange={handleChange} style={{ paddingLeft: '2.2rem' }}>
                                             <option value="Low">Low (Below Ksh 20k)</option>
                                             <option value="Middle">Middle (Ksh 20k - 50k)</option>
                                             <option value="High">High (Above Ksh 50k)</option>
@@ -155,10 +155,10 @@ const ProfileDrawer = ({ isOpen, onClose }) => {
                                 </div>
                             </section>
 
-                            <section style={{ borderTop: '1px solid #f1f5f9', paddingTop: '1.5rem' }}>
-                                <h3 style={{ fontSize: '0.75rem', fontWeight: '800', marginBottom: '1rem', textTransform: 'uppercase', color: '#94a3b8', letterSpacing: '0.05em' }}>Security</h3>
+                            <section style={{ borderTop: '1px solid #f1f5f9', paddingTop: '1rem' }}>
+                                <h3 style={{ fontSize: '0.7rem', fontWeight: '800', marginBottom: '0.75rem', textTransform: 'uppercase', color: '#94a3b8', letterSpacing: '0.05em' }}>Security</h3>
                                 <div className="input-group">
-                                    <label style={{ color: '#475569', fontWeight: '700', fontSize: '0.7rem', textTransform: 'uppercase' }}>New Password</label>
+                                    <label>New Password</label>
                                     <div style={{ position: 'relative' }}>
                                         <input
                                             name="password"
@@ -166,20 +166,20 @@ const ProfileDrawer = ({ isOpen, onClose }) => {
                                             value={formData.password}
                                             onChange={handleChange}
                                             placeholder="••••••••"
-                                            style={{ fontSize: '0.9rem', paddingRight: '2.5rem' }}
+                                            style={{ paddingRight: '2.5rem' }}
                                         />
                                         <button
                                             type="button"
                                             onClick={() => setShowPassword(!showPassword)}
                                             style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: 0 }}
                                         >
-                                            {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                                            {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
                                         </button>
                                     </div>
                                 </div>
 
                                 <div className="input-group">
-                                    <label style={{ color: '#475569', fontWeight: '700', fontSize: '0.7rem', textTransform: 'uppercase' }}>Confirm Password</label>
+                                    <label>Confirm Password</label>
                                     <div style={{ position: 'relative' }}>
                                         <input
                                             name="confirmPassword"
@@ -187,23 +187,23 @@ const ProfileDrawer = ({ isOpen, onClose }) => {
                                             value={formData.confirmPassword}
                                             onChange={handleChange}
                                             placeholder="••••••••"
-                                            style={{ fontSize: '0.9rem', paddingRight: '2.5rem' }}
+                                            style={{ paddingRight: '2.5rem' }}
                                         />
                                         <button
                                             type="button"
                                             onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                                             style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: 0 }}
                                         >
-                                            {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                                            {showConfirmPassword ? <EyeOff size={15} /> : <Eye size={15} />}
                                         </button>
                                     </div>
                                 </div>
                             </section>
                         </div>
 
-                        <div style={{ marginTop: '2rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                            <button type="submit" disabled={loading} className="btn btn-primary" style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', background: '#0f172a', color: '#fff', padding: '1rem', fontWeight: '800', letterSpacing: '0.05em' }}>
-                                <Save size={18} /> {loading ? 'SAVING CHANGES...' : 'SAVE CHANGES'}
+                        <div style={{ marginTop: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                            <button type="submit" disabled={loading} className="btn btn-primary" style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', background: '#0f172a', color: '#fff', padding: '0.8rem', fontWeight: '800', letterSpacing: '0.05em', fontSize: '0.85rem' }}>
+                                <Save size={16} /> {loading ? 'SAVING...' : 'SAVE CHANGES'}
                             </button>
                             <button
                                 type="button"
@@ -214,7 +214,7 @@ const ProfileDrawer = ({ isOpen, onClose }) => {
                                 className="btn"
                                 style={{
                                     width: '100%',
-                                    padding: '0.8rem',
+                                    padding: '0.7rem',
                                     background: '#fef2f2',
                                     color: '#dc2626',
                                     fontWeight: '800',
@@ -223,10 +223,11 @@ const ProfileDrawer = ({ isOpen, onClose }) => {
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
-                                    gap: '0.5rem'
+                                    gap: '0.5rem',
+                                    fontSize: '0.8rem'
                                 }}
                             >
-                                <LogOut size={18} /> LOGOUT
+                                <LogOut size={16} /> LOGOUT
                             </button>
                         </div>
                     </form>
