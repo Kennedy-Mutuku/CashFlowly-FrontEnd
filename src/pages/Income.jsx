@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import { Plus, Trash2, Smartphone, Target } from 'lucide-react';
 import { parseMpesaMessage } from '../utils/mpesaParser';
+import { useMpesaListener } from '../hooks/useMpesaListener';
 
 const Income = () => {
     const [incomes, setIncomes] = useState([]);
@@ -18,6 +19,23 @@ const Income = () => {
     useEffect(() => {
         fetchIncomes();
     }, []);
+
+    // Listen for background M-PESA messages
+    useMpesaListener((parsed) => {
+        if (parsed && parsed.type === 'income') {
+            setAmount(parsed.amount);
+            setSource(parsed.partner);
+            setTitle(parsed.title);
+            setDate(parsed.date);
+            setTime(parsed.time);
+            setPaymentMethod('M-PESA');
+            setTransactionId(parsed.transactionId);
+            setMpesaText("Message detected automatically!");
+
+            // Optional: Auto-submit or show a "Confirm" button
+            alert(`New M-PESA Income detected from ${parsed.partner}: Ksh ${parsed.amount}. Please review and save.`);
+        }
+    });
 
     const fetchIncomes = async () => {
         const { data } = await api.get('/income');

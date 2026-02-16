@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import { Target, Plus, CheckCircle, Smartphone } from 'lucide-react';
 import { parseMpesaMessage } from '../utils/mpesaParser';
+import { useMpesaListener } from '../hooks/useMpesaListener';
 
 const Savings = () => {
     const [goals, setGoals] = useState([]);
@@ -16,6 +17,17 @@ const Savings = () => {
     useEffect(() => {
         fetchGoals();
     }, []);
+
+    // Listen for background M-PESA messages
+    useMpesaListener((parsed) => {
+        if (parsed && parsed.type === 'savings') {
+            setParsedData(parsed);
+            setMpesaText("Zidi message detected automatically!");
+            if (goals.length > 0) setSelectedGoalId(goals[0]._id);
+
+            alert(`New Zidi Savings detected: Ksh ${parsed.amount}. Please select a goal and confirm.`);
+        }
+    });
 
     const fetchGoals = async () => {
         try {
