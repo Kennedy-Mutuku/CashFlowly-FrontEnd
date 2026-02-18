@@ -333,8 +333,8 @@ const Dashboard = () => {
             data: Object.values(report.expenseByCategory),
             backgroundColor: CHART_COLORS,
             borderRadius: 6,
-            barThickness: 24,
-            maxBarThickness: 32
+            barThickness: 30,
+            maxBarThickness: 35
         }]
     };
 
@@ -343,8 +343,9 @@ const Dashboard = () => {
         datasets: [{
             data: [report.totalIncome, report.totalExpenses],
             backgroundColor: ['#16a34a', '#dc2626'],
-            borderRadius: 0,
-            barThickness: 20
+            borderRadius: 6,
+            barThickness: 30,
+            maxBarThickness: 35
         }]
     };
 
@@ -860,23 +861,26 @@ const Dashboard = () => {
             </div>
 
             {/* Bottom Analytics */}
-            <div className="dashboard-charts" style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: '1.5rem' }}>
-                <div className="card">
+            <div className="dashboard-charts" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', alignItems: 'start' }}>
+                <div className="card" style={{ height: '100%' }}>
                     <h3 style={{ marginBottom: '1.5rem', fontSize: '0.85rem', fontWeight: '900', textTransform: 'uppercase', color: '#64748b', letterSpacing: '0.05em' }}>Inflow vs Outflow</h3>
-                    <Bar data={barData} options={{
-                        responsive: true,
-                        plugins: { legend: { display: false } },
-                        scales: {
-                            y: { grid: { borderDash: [5, 5], color: '#f1f5f9' }, ticks: { color: '#64748b', font: { size: 10, weight: '700' } } },
-                            x: { grid: { display: false }, ticks: { color: '#0f172a', font: { size: 11, weight: '800' } } }
-                        }
-                    }} />
+                    <div style={{ height: '300px' }}>
+                        <Bar data={barData} options={{
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: { legend: { display: false } },
+                            scales: {
+                                y: { grid: { borderDash: [5, 5], color: '#f1f5f9' }, ticks: { color: '#64748b', font: { size: 10, weight: '700' } }, beginAtZero: true },
+                                x: { grid: { display: false }, ticks: { color: '#0f172a', font: { size: 11, weight: '800' } } }
+                            }
+                        }} />
+                    </div>
                 </div>
-                <div className="card">
+                <div className="card" style={{ height: '100%' }}>
                     <h3 style={{ marginBottom: '1.5rem', fontSize: '0.85rem', fontWeight: '900', textTransform: 'uppercase', color: '#64748b', letterSpacing: '0.05em' }}>Expense Breakdown</h3>
                     {Object.keys(report.expenseByCategory).length > 0 ? (
                         <>
-                            <div style={{ height: '240px', marginBottom: '1rem' }}>
+                            <div style={{ height: '300px', marginBottom: '1rem' }}>
                                 <Bar
                                     data={expenseData}
                                     options={{
