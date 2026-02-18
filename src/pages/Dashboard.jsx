@@ -312,20 +312,20 @@ const Dashboard = () => {
         </div>
     );
 
-    // Helper to shorten labels for X-axis
+    // Helper to shorten labels for X-axis (Abbreviations for Legend)
     const shortLabels = {
-        'Housing & Utilities': 'Housing',
-        'Food & Household': 'Food',
-        'Transportation': 'Transport',
-        'Health & Personal Care': 'Health',
-        'Financial Obligations': 'Bills',
-        'Lifestyle & Entertainment': 'Life',
-        'Assets': 'Assets',
-        'Miscellaneous': 'Misc'
+        'Housing & Utilities': 'HOU',
+        'Food & Household': 'FOD',
+        'Transportation': 'TRN',
+        'Health & Personal Care': 'HLT',
+        'Financial Obligations': 'FIN',
+        'Lifestyle & Entertainment': 'LIF',
+        'Assets': 'AST',
+        'Miscellaneous': 'MSC'
     };
 
     const expenseData = {
-        labels: Object.keys(report.expenseByCategory).map(k => shortLabels[k] || k),
+        labels: Object.keys(report.expenseByCategory).map(k => shortLabels[k] || k.substring(0, 3).toUpperCase()),
         datasets: [{
             label: 'Amount (Ksh)',
             data: Object.values(report.expenseByCategory),
@@ -862,37 +862,47 @@ const Dashboard = () => {
                 <div className="card">
                     <h3 style={{ marginBottom: '1.5rem', fontSize: '0.85rem', fontWeight: '900', textTransform: 'uppercase', color: '#64748b', letterSpacing: '0.05em' }}>Expense Breakdown</h3>
                     {Object.keys(report.expenseByCategory).length > 0 ? (
-                        <div style={{ height: '240px' }}>
-                            <Bar
-                                data={expenseData}
-                                options={{
-                                    responsive: true,
-                                    maintainAspectRatio: false,
-                                    plugins: {
-                                        legend: { display: false },
-                                        tooltip: {
-                                            callbacks: {
-                                                title: (items) => {
-                                                    const key = Object.keys(shortLabels).find(k => shortLabels[k] === items[0].label);
-                                                    return key || items[0].label;
+                        <>
+                            <div style={{ height: '240px', marginBottom: '1rem' }}>
+                                <Bar
+                                    data={expenseData}
+                                    options={{
+                                        responsive: true,
+                                        maintainAspectRatio: false,
+                                        plugins: {
+                                            legend: { display: false },
+                                            tooltip: {
+                                                callbacks: {
+                                                    title: (items) => {
+                                                        const key = Object.keys(shortLabels).find(k => shortLabels[k] === items[0].label);
+                                                        return key || items[0].label;
+                                                    }
                                                 }
                                             }
-                                        }
-                                    },
-                                    scales: {
-                                        y: {
-                                            grid: { color: '#f1f5f9', borderDash: [4, 4] },
-                                            ticks: { color: '#94a3b8', font: { size: 9, weight: '600' } },
-                                            beginAtZero: true
                                         },
-                                        x: {
-                                            grid: { display: false },
-                                            ticks: { color: '#0f172a', font: { size: 10, weight: '800' }, maxRotation: 0, minRotation: 0 }
+                                        scales: {
+                                            y: {
+                                                grid: { color: '#f1f5f9', borderDash: [4, 4] },
+                                                ticks: { color: '#94a3b8', font: { size: 9, weight: '600' } },
+                                                beginAtZero: true
+                                            },
+                                            x: {
+                                                grid: { display: false },
+                                                ticks: { color: '#0f172a', font: { size: 10, weight: '900' }, maxRotation: 0, minRotation: 0 }
+                                            }
                                         }
-                                    }
-                                }}
-                            />
-                        </div>
+                                    }}
+                                />
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.5rem 1rem', padding: '0 0.5rem' }}>
+                                {Object.entries(shortLabels).filter(([full]) => Object.keys(report.expenseByCategory).includes(full)).map(([full, abbr], i) => (
+                                    <div key={abbr} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.65rem' }}>
+                                        <span style={{ fontWeight: '900', color: '#0f172a', minWidth: '24px' }}>{abbr}</span>
+                                        <span style={{ color: '#64748b', fontWeight: '500' }}>{full}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </>
                     ) : (
                         <div style={{ textAlign: 'center', padding: '4rem', color: '#94a3b8', fontSize: '0.85rem', border: '1px dashed #e2e8f0' }}>NO EXPENSES DATA FOUND</div>
                     )}
