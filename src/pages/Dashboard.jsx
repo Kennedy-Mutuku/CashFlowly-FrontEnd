@@ -520,7 +520,7 @@ const Dashboard = () => {
                             <div className="ticker-item"><span>NET BALANCE:</span> Ksh {report.balance.toLocaleString()}</div>
                             <div className="ticker-item"><span>TOTAL IN:</span> <span style={{ color: '#22c55e' }}>Ksh {report.totalIncome.toLocaleString()}</span></div>
                             <div className="ticker-item"><span>TOTAL OUT:</span> <span style={{ color: '#ef4444' }}>Ksh {report.totalExpenses.toLocaleString()}</span></div>
-                            <div className="ticker-item"><span>ZIIDI SAVINGS:</span> <span style={{ color: '#fbbf24' }}>Ksh {report.totalSavings?.toLocaleString() || 0}</span></div>
+                            <div className="ticker-item"><span>ZIIDI BAL:</span> <span style={{ color: '#fbbf24' }}>Ksh {report.totalSavings?.toLocaleString() || 0}</span></div>
                             <div className="ticker-item"><span>MONTH:</span> {new Date(month).toLocaleString('default', { month: 'long', year: 'numeric' }).toUpperCase()}</div>
                             <div className="ticker-item"><span>CASHFLOWLY:</span> YOUR AI-POWERED FINANCIAL CO-PILOT — TRACK SPENDING, AUTOMATE SAVINGS & GROW WEALTH.</div>
                         </React.Fragment>
