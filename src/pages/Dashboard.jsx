@@ -853,13 +853,12 @@ const Dashboard = () => {
                             <Bar
                                 data={expenseData}
                                 options={{
-                                    indexAxis: 'y',
                                     responsive: true,
                                     maintainAspectRatio: false,
                                     plugins: { legend: { display: false } },
                                     scales: {
-                                        x: { grid: { display: false }, ticks: { color: '#64748b', font: { size: 9, weight: '700' } } },
-                                        y: { grid: { display: false }, ticks: { color: '#0f172a', font: { size: 10, weight: '800' } } }
+                                        y: { grid: { display: false }, ticks: { color: '#64748b', font: { size: 9, weight: '700' } } },
+                                        x: { grid: { display: false }, ticks: { color: '#0f172a', font: { size: 9, weight: '800' } } }
                                     }
                                 }}
                             />
