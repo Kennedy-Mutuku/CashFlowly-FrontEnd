@@ -3,7 +3,7 @@ import api from '../services/api';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title } from 'chart.js';
 import { Pie, Bar } from 'react-chartjs-2';
 import {
-    TrendingUp, Wallet, Lightbulb,
+    TrendingUp, Wallet, Lightbulb, Target,
     Smartphone, ChevronLeft, ChevronRight, PlusCircle,
     MinusCircle, LayoutDashboard, Download, Calendar, X, Save
 } from 'lucide-react';
@@ -14,18 +14,20 @@ ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarEle
 const TYPE_LABELS = {
     income: { label: '✓ INCOME DETECTED', color: '#16a34a', bg: '#bbf7d0' },
     expense: { label: '✗ EXPENSE DETECTED', color: '#dc2626', bg: '#fee2e2' },
-    savings: { label: '🏦 SAVINGS DETECTED', color: '#2563eb', bg: '#dbeafe' },
+    savings: { label: '🏦 SAVINGS DEPOSIT', color: '#2563eb', bg: '#dbeafe' },
+    'savings-withdrawal': { label: '💸 SAVINGS WITHDRAWAL', color: '#d97706', bg: '#ffedd5' },
 };
 
 const Dashboard = () => {
     const [report, setReport] = useState(null);
-    const [goals, setGoals] = useState([]);
     const [month, setMonth] = useState(new Date().toLocaleDateString('en-CA', { timeZone: 'Africa/Nairobi' }).slice(0, 7));
     const [mpesaText, setMpesaText] = useState('');
     const [parsedData, setParsedData] = useState(null);
     const [activeSlide, setActiveSlide] = useState(0);
-    const [selectedGoalId, setSelectedGoalId] = useState('');
     const [syncing, setSyncing] = useState(false);
+    const [aiAdvice, setAiAdvice] = useState([]);
+    const [loadingAdvice, setLoadingAdvice] = useState(false);
+    const [savingsPop, setSavingsPop] = useState(null); // { amount, savings }
 
     // Inline Cash-In form state
     const [showCashInForm, setShowCashInForm] = useState(false);
@@ -54,7 +56,8 @@ const Dashboard = () => {
     const TOAST_CONFIG = {
         income: { color: '#16a34a', bg: '#f0fdf4', border: '#bbf7d0', label: 'Income Recorded', verb: 'logged to your Cash In records' },
         expense: { color: '#dc2626', bg: '#fef2f2', border: '#fecaca', label: 'Expense Recorded', verb: 'saved to your Cash Out records' },
-        savings: { color: '#2563eb', bg: '#eff6ff', border: '#bfdbfe', label: 'Savings Updated', verb: 'added to your savings goal' },
+        savings: { color: '#2563eb', bg: '#eff6ff', border: '#bfdbfe', label: 'Savings Updated', verb: 'added to your Ziidi savings' },
+        'savings-withdrawal': { color: '#d97706', bg: '#fff7ed', border: '#fed7aa', label: 'Withdrawal Recorded', verb: 'withdrawn from Ziidi' },
     };
 
     const showToast = (amount, detail, type = 'income') => {
@@ -62,7 +65,18 @@ const Dashboard = () => {
         setToastPaused(false);
         toastRemainingRef.current = 2800;
         toastStartRef.current = Date.now();
-        toastTimerRef.current = setTimeout(() => setToast(null), 2800);
+        toastTimerRef.current = setTimeout(() => {
+            setToast(null);
+            // Trigger savings pop after toast disappears
+            if (type === 'income') {
+                setTimeout(() => {
+                    setSavingsPop({
+                        amount: parseFloat(amount),
+                        savings: Math.floor(parseFloat(amount) * 0.20)
+                    });
+                }, 400); // slight beat transition
+            }
+        }, 2800);
     };
 
     const handleToastPressStart = () => {
@@ -82,25 +96,48 @@ const Dashboard = () => {
         toastTimerRef.current = setTimeout(() => setToast(null), toastRemainingRef.current);
     };
 
+    const fetchReport = async () => {
+        try {
+            const { data } = await api.get(`/reports/monthly?month=${month}`);
+            setReport(data);
+        } catch (err) {
+            console.error('Failed to fetch report', err);
+        }
+    };
+
+    const fetchAiAdvice = async () => {
+        try {
+            setLoadingAdvice(true);
+            const { data } = await api.get('/ai/advice');
+            setAiAdvice(data);
+        } catch (err) {
+            console.error('Failed to fetch AI advice');
+            setAiAdvice([
+                "Track your spending daily to stay on top of your finances.",
+                "Consider setting aside 10% of your income for savings.",
+                "Review your subscription list for any unused services."
+            ]);
+        } finally {
+            setLoadingAdvice(false);
+        }
+    };
+
     useEffect(() => {
         fetchReport();
-        fetchGoals();
+        fetchAiAdvice();
     }, [month]);
+
 
     const handleMpesaPaste = (e) => {
         const text = e.target.value;
         setMpesaText(text);
         const parsed = parseMpesaMessage(text);
         if (parsed) {
-            // Force categories to be selected manually for expenses to match manual entries
+            // Force categories to be selected manually for expenses
             if (parsed.type === 'expense') {
                 parsed.category = '';
             }
             setParsedData(parsed);
-            // Pre-select first goal if savings type
-            if (parsed.type === 'savings' && goals.length > 0) {
-                setSelectedGoalId(goals[0]._id);
-            }
         } else {
             setParsedData(null);
         }
@@ -111,31 +148,58 @@ const Dashboard = () => {
         setSyncing(true);
 
         try {
+            const timestamp = parsedData.time ? `${parsedData.date}T${parsedData.time}` : parsedData.date;
+
             if (parsedData.type === 'savings') {
-                // Route to savings goal
-                if (!selectedGoalId) {
-                    alert('Please select a savings goal to contribute to.');
-                    setSyncing(false);
-                    return;
-                }
-                const goal = goals.find(g => g._id === selectedGoalId);
-                if (!goal) {
-                    alert('Selected goal not found.');
-                    setSyncing(false);
-                    return;
-                }
-                await api.put(`/savings/${selectedGoalId}`, {
-                    currentAmount: goal.currentAmount + parseFloat(parsedData.amount),
+                // DEPOSIT: Record Savings + record Expense (Assets)
+                await api.post('/savings', {
+                    amount: parsedData.amount,
+                    type: 'deposit',
+                    date: timestamp,
+                    title: `Sent to Ziidi`,
                     transactionId: parsedData.transactionId,
+                    partner: 'Ziidi'
                 });
-                fetchGoals();
-                showToast(parsedData.amount, goal.name, 'savings');
+
+                await api.post('/expenses', {
+                    title: `Sent to Ziidi (Savings)`,
+                    amount: parsedData.amount,
+                    date: timestamp,
+                    category: 'Assets',
+                    paymentMethod: 'M-PESA',
+                    transactionId: parsedData.transactionId,
+                    description: `Automated dual-recording for Ziidi deposit.`
+                });
+
+                showToast(parsedData.amount, 'Ziidi Savings', 'savings');
+            } else if (parsedData.type === 'savings-withdrawal') {
+                // WITHDRAWAL: Record Savings withdrawal + record Income
+                await api.post('/savings', {
+                    amount: parsedData.amount,
+                    type: 'withdrawal',
+                    date: timestamp,
+                    title: `Withdrawn from Ziidi`,
+                    transactionId: parsedData.transactionId,
+                    partner: 'Ziidi'
+                });
+
+                await api.post('/income', {
+                    title: `Ziidi Withdrawal`,
+                    source: 'Ziidi',
+                    amount: parsedData.amount,
+                    date: timestamp,
+                    paymentMethod: 'M-PESA',
+                    transactionId: parsedData.transactionId,
+                    description: `Automated dual-recording for Ziidi withdrawal.`
+                });
+
+                showToast(parsedData.amount, 'Main Wallet', 'savings-withdrawal');
             } else {
-                // Route to income or expense
+                // Route to standard Income or Expense
                 const payload = {
                     title: parsedData.title,
                     amount: parsedData.amount,
-                    date: parsedData.time ? `${parsedData.date}T${parsedData.time}` : parsedData.date,
+                    date: timestamp,
                     description: parsedData.description || '',
                     paymentMethod: 'M-PESA',
                     transactionId: parsedData.transactionId,
@@ -154,7 +218,6 @@ const Dashboard = () => {
 
                 const endpoint = parsedData.type === 'income' ? '/income' : '/expenses';
                 await api.post(endpoint, payload);
-                fetchReport();
                 showToast(
                     parsedData.amount,
                     parsedData.type === 'income' ? parsedData.partner : parsedData.title,
@@ -162,9 +225,9 @@ const Dashboard = () => {
                 );
             }
 
+            fetchReport();
             setMpesaText('');
             setParsedData(null);
-            setSelectedGoalId('');
         } catch (err) {
             console.error(err);
             if (
@@ -240,23 +303,6 @@ const Dashboard = () => {
         }
     };
 
-    const fetchReport = async () => {
-        try {
-            const { data } = await api.get(`/reports/monthly?month=${month}`);
-            setReport(data);
-        } catch (err) {
-            console.error('Failed to fetch report');
-        }
-    };
-
-    const fetchGoals = async () => {
-        try {
-            const { data } = await api.get('/savings');
-            setGoals(data);
-        } catch (err) {
-            console.error('Failed to fetch goals');
-        }
-    };
 
     if (!report) return (
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh', flexDirection: 'column', gap: '1rem' }}>
@@ -300,25 +346,23 @@ const Dashboard = () => {
         a.click();
     };
 
-    const recommendations = [
+    const recommendations = aiAdvice.length > 0 ? aiAdvice.map((tip, idx) => {
+        const icons = [
+            <Lightbulb size={24} color="#eab308" />,
+            <Wallet size={24} color="#2563eb" />,
+            <TrendingUp size={24} color="#16a34a" />,
+            <Target size={24} color="#8b5cf6" />
+        ];
+        return {
+            title: `INSIGHT #${idx + 1}`,
+            desc: tip,
+            icon: icons[idx % icons.length]
+        };
+    }) : [
         {
             title: "50/30/20 BUDGET RULE",
             desc: `Based on your Ksh ${report.totalIncome.toLocaleString()} income: Ksh ${(report.totalIncome * 0.5).toLocaleString()} for Needs, Ksh ${(report.totalIncome * 0.3).toLocaleString()} for Wants, and Ksh ${(report.totalIncome * 0.2).toLocaleString()} for Savings.`,
             icon: <Lightbulb size={24} color="#eab308" />
-        },
-        {
-            title: "EMERGENCY FUND STATUS",
-            desc: report.totalExpenses > 0
-                ? `Your current safety net covers ${((report.balance / (report.totalExpenses || 1))).toFixed(1)} months. Aim for 6 months (Ksh ${(report.totalExpenses * 6).toLocaleString()}).`
-                : "Record your expenses to calculate your safety net recommendation.",
-            icon: <Wallet size={24} color="#2563eb" />
-        },
-        {
-            title: "SAVINGS GOAL TRACKER",
-            desc: goals.length > 0
-                ? `You have ${goals.length} active goals. Highest priority: "${goals[0].name.toUpperCase()}" with Ksh ${goals[0].currentAmount.toLocaleString()} saved.`
-                : "You haven't set any savings goals yet. Start small to build a massive future!",
-            icon: <TrendingUp size={24} color="#16a34a" />
         }
     ];
 
@@ -409,6 +453,56 @@ const Dashboard = () => {
                 );
             })()}
 
+            {/* Step 2: Subtle Savings Insight Card */}
+            {savingsPop && (
+                <div style={{
+                    position: 'fixed', bottom: '2rem', left: '50%',
+                    transform: 'translateX(-50%)', zIndex: 10000,
+                    width: '90%', maxWidth: '380px',
+                    animation: 'toastIn 0.4s cubic-bezier(0.34,1.56,0.64,1)',
+                    pointerEvents: 'auto'
+                }}>
+                    <div style={{
+                        background: '#fff',
+                        padding: '1.25rem',
+                        borderRadius: '16px',
+                        boxShadow: '0 20px 50px rgba(15, 23, 42, 0.15)',
+                        border: '1px solid #e2e8f0',
+                        textAlign: 'left',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '0.75rem',
+                        position: 'relative',
+                        borderLeft: '4px solid #eab308'
+                    }}>
+                        <button
+                            onClick={() => setSavingsPop(null)}
+                            style={{ position: 'absolute', top: '10px', right: '10px', background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' }}
+                        >
+                            <X size={16} />
+                        </button>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <div style={{ background: '#0f172a', padding: '0.35rem', borderRadius: '6px' }}>
+                                <Target size={14} color="#eab308" />
+                            </div>
+                            <span style={{ fontSize: '0.6rem', fontWeight: '900', color: '#64748b', letterSpacing: '0.08em' }}>VIRTUAL ADVISOR INSIGHT</span>
+                        </div>
+
+                        <p style={{ fontSize: '0.85rem', color: '#1e293b', fontWeight: '600', lineHeight: '1.5', margin: 0, paddingRight: '1rem' }}>
+                            Wow, congratulations! Now send <strong style={{ color: '#0f172a' }}>Ksh {savingsPop.savings.toLocaleString()}</strong> to M-PESA <strong>Ziidi</strong> and paste the message here.
+                        </p>
+
+                        <div
+                            onClick={() => setSavingsPop(null)}
+                            style={{ fontSize: '0.7rem', color: '#2563eb', fontWeight: '800', cursor: 'pointer', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+                        >
+                            DISMISS & CONTINUE
+                        </div>
+                    </div>
+                </div>
+            )}
+
 
             {/* Live Financial Ticker */}
             <div style={{
@@ -483,6 +577,25 @@ const Dashboard = () => {
                                 <span style={{ fontSize: '0.65rem', color: '#94a3b8', fontWeight: '700' }}>SYNC PREVIEW</span>
                             </div>
 
+                            <div style={{ marginBottom: '1rem', padding: '0.5rem', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                                <span style={{ color: '#94a3b8', fontSize: '0.7rem', fontWeight: '800', display: 'block', marginBottom: '0.25rem' }}>PARTNER / SOURCE</span>
+                                <p style={{ color: '#0f172a', fontWeight: '900', fontSize: '0.8rem', margin: 0 }}>
+                                    {parsedData.type === 'savings' || parsedData.type === 'savings-withdrawal'
+                                        ? 'SAVINGS Ledger (Automatic)'
+                                        : (parsedData.partner || 'Unknown Source/Recipient')}
+                                </p>
+                            </div>
+
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', padding: '0.5rem', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                                <span style={{ color: '#94a3b8', fontSize: '0.7rem', fontWeight: '800' }}>SYNC TYPE</span>
+                                <span style={{
+                                    color: parsedData.type === 'income' ? '#22c55e' : (parsedData.type === 'savings' ? '#2563eb' : (parsedData.type === 'savings-withdrawal' ? '#d97706' : '#ef4444')),
+                                    fontWeight: '900', fontSize: '0.7rem'
+                                }}>
+                                    {parsedData.type === 'savings' ? 'SAVINGS DEPOSIT + CASH OUT' : (parsedData.type === 'savings-withdrawal' ? 'SAVINGS WITHDRAWAL + CASH IN' : parsedData.type.toUpperCase())}
+                                </span>
+                            </div>
+
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '0.75rem' }}>
                                 <div className="input-group">
                                     <label style={{ fontSize: '0.65rem', marginBottom: '0.25rem' }}>Amount (Ksh)</label>
@@ -513,29 +626,6 @@ const Dashboard = () => {
                                 </div>
                             </div>
 
-                            {/* Savings: show goal selector */}
-                            {parsedData.type === 'savings' && (
-                                <div className="input-group" style={{ marginBottom: '0.75rem' }}>
-                                    <label style={{ fontSize: '0.65rem', marginBottom: '0.25rem' }}>CONTRIBUTE TO SAVINGS GOAL</label>
-                                    {goals.length > 0 ? (
-                                        <select
-                                            value={selectedGoalId}
-                                            onChange={(e) => setSelectedGoalId(e.target.value)}
-                                            style={{ padding: '0.4rem', fontSize: '0.8rem', border: '1px solid #e2e8f0' }}
-                                        >
-                                            {goals.map(goal => (
-                                                <option key={goal._id} value={goal._id}>
-                                                    {goal.name.toUpperCase()} — Ksh {goal.currentAmount.toLocaleString()} / {goal.targetAmount.toLocaleString()}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    ) : (
-                                        <p style={{ fontSize: '0.8rem', color: '#dc2626', fontWeight: '600' }}>
-                                            No savings goals found. <a href="/savings" style={{ color: '#2563eb' }}>Create one first →</a>
-                                        </p>
-                                    )}
-                                </div>
-                            )}
 
                             {/* Income: show source/partner */}
                             {parsedData.type === 'income' && (
@@ -728,15 +818,21 @@ const Dashboard = () => {
                 </div>
 
                 <div style={{ transition: 'all 0.5s ease' }}>
-                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1.5rem' }}>
-                        <div style={{ padding: '1rem', background: '#fff', border: '1px solid #e2e8f0' }}>
-                            {recommendations[activeSlide].icon}
+                    {loadingAdvice ? (
+                        <div style={{ padding: '1.5rem', textAlign: 'center', width: '100%', color: '#64748b', fontSize: '0.85rem', fontWeight: '700' }}>
+                            GENERIC AI ANALYSIS IN PROGRESS...
                         </div>
-                        <div>
-                            <h4 style={{ fontWeight: '900', fontSize: '1rem', color: '#0f172a', marginBottom: '0.5rem' }}>{recommendations[activeSlide].title}</h4>
-                            <p style={{ fontSize: '0.9rem', color: '#64748b', fontWeight: '500', lineHeight: '1.6' }}>{recommendations[activeSlide].desc}</p>
+                    ) : (
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1.5rem' }}>
+                            <div style={{ padding: '1rem', background: '#fff', border: '1px solid #e2e8f0' }}>
+                                {recommendations[activeSlide]?.icon}
+                            </div>
+                            <div>
+                                <h4 style={{ fontWeight: '900', fontSize: '1rem', color: '#0f172a', marginBottom: '0.5rem' }}>{recommendations[activeSlide]?.title}</h4>
+                                <p style={{ fontSize: '0.9rem', color: '#64748b', fontWeight: '500', lineHeight: '1.6' }}>{recommendations[activeSlide]?.desc}</p>
+                            </div>
                         </div>
-                    </div>
+                    )}
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'center', gap: '0.4rem', marginTop: '1.5rem' }}>

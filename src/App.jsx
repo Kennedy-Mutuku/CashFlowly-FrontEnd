@@ -9,6 +9,7 @@ import Expenses from './pages/Expenses';
 import Budget from './pages/Budget';
 import Savings from './pages/Savings';
 import Debts from './pages/Debts';
+import CashFlowlyGPT from './pages/CashFlowlyGPT';
 import Navbar from './components/Navbar';
 import './index.css';
 
@@ -41,6 +42,7 @@ function App() {
                         <Route path="/budget" element={<Budget />} />
                         <Route path="/savings" element={<Savings />} />
                         <Route path="/debts" element={<Debts />} />
+                        <Route path="/ai-advisor" element={<CashFlowlyGPT />} />
                       </Routes>
                     </main>
                   </>

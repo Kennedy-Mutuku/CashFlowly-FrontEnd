@@ -51,16 +51,23 @@ export const parseMpesaMessage = (message) => {
         data.type = 'income';
         // Extract partner from "received Ksh... from JOHN DOE"
         const partnerMatch = message.match(/from\s+(.+?)\s+on/i) || message.match(/from\s+(.+?)\./i);
-        data.partner = partnerMatch ? partnerMatch[1].trim() : 'Unknown Source';
-        data.title = `Received from ${data.partner}`;
+        const partner = partnerMatch ? partnerMatch[1].trim() : 'Unknown Source';
+        data.partner = partner;
+
+        if (partner.toLowerCase().includes('ziidi') || partner.toLowerCase().includes('zidi')) {
+            data.type = 'savings-withdrawal';
+            data.title = `Withdrawn from Ziidi`;
+        } else {
+            data.title = `Received from ${partner}`;
+        }
     } else if (message.toLowerCase().includes('paid to') || message.toLowerCase().includes('sent to')) {
         const partnerMatch = message.match(/(?:paid|sent)\s+to\s+(.+?)\s+on/i) || message.match(/(?:paid|sent)\s+to\s+(.+?)\./i);
         const partner = partnerMatch ? partnerMatch[1].trim() : 'Unknown recipient';
 
         data.partner = partner;
-        if (partner.toLowerCase().includes('zidi')) {
+        if (partner.toLowerCase().includes('ziidi') || partner.toLowerCase().includes('zidi')) {
             data.type = 'savings';
-            data.title = `Saved to Zidi`;
+            data.title = `Saved to Ziidi`;
         } else {
             data.type = 'expense';
             data.title = `Paid to ${partner}`;
@@ -70,9 +77,9 @@ export const parseMpesaMessage = (message) => {
         const partner = partnerMatch ? partnerMatch[1].trim() : 'Services';
         data.partner = partner;
 
-        if (partner.toLowerCase().includes('zidi')) {
+        if (partner.toLowerCase().includes('zidi') || partner.toLowerCase().includes('ziidi')) {
             data.type = 'savings';
-            data.title = `Saved to Zidi`;
+            data.title = `Saved to Ziidi`;
         } else {
             data.type = 'expense';
             data.title = `Payment for ${partner}`;

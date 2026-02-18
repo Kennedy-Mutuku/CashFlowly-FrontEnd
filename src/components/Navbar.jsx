@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LayoutDashboard, Receipt, TrendingUp, TrendingDown, Target, LogOut, Wallet, Menu, X, Users, User } from 'lucide-react';
+import { LayoutDashboard, Receipt, TrendingUp, TrendingDown, Target, LogOut, Wallet, Menu, X, Users, User, Bot } from 'lucide-react';
 import ProfileDrawer from './ProfileDrawer';
 
 const Navbar = () => {
@@ -24,6 +24,7 @@ const Navbar = () => {
         { label: 'Budget', path: '/budget', icon: <Wallet size={18} /> },
         { label: 'Savings', path: '/savings', icon: <Target size={18} /> },
         { label: 'Debts', path: '/debts', icon: <Users size={18} /> },
+        { label: 'AI Advisor', path: '/ai-advisor', icon: <Bot size={18} /> },
     ];
 
     return (
@@ -49,7 +50,7 @@ const Navbar = () => {
                 </Link>
 
                 {/* Desktop Nav */}
-                <div className="nav-links" style={{ display: 'flex', gap: '1.75rem', alignItems: 'center' }}>
+                <div className="nav-links" style={{ display: 'flex', gap: '1.25rem', alignItems: 'center' }}>
                     {navItems.map((item) => {
                         const isActive = location.pathname === item.path;
                         const activeColor = item.label === 'Cash Out' ? '#ef4444' : '#2563eb';
@@ -58,7 +59,7 @@ const Navbar = () => {
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: '0.4rem',
-                                fontSize: '0.85rem',
+                                fontSize: '0.72rem',
                                 fontWeight: isActive ? '900' : '600',
                                 color: isActive ? activeColor : '#475569',
                                 textTransform: 'uppercase',
@@ -66,7 +67,7 @@ const Navbar = () => {
                                 borderBottom: isActive ? `2px solid ${activeColor}` : '2px solid transparent',
                                 transition: 'color 0.2s ease'
                             }}>
-                                {React.cloneElement(item.icon, { size: 16, color: isActive ? activeColor : 'currentColor' })} {item.label}
+                                {React.cloneElement(item.icon, { size: 14, color: isActive ? activeColor : 'currentColor' })} {item.label}
                             </Link>
                         );
                     })}
@@ -74,7 +75,7 @@ const Navbar = () => {
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                         <div
                             onClick={() => setIsProfileOpen(true)}
-                            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: '700', fontSize: '0.85rem', color: '#0f172a', textDecoration: 'none', cursor: 'pointer' }}
+                            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: '750', fontSize: '0.72rem', color: '#0f172a', textDecoration: 'none', cursor: 'pointer' }}
                         >
                             <div style={{ padding: '0.4rem', background: '#f1f5f9', color: '#475569', borderRadius: '0' }}>
                                 <User size={16} />
