@@ -312,14 +312,27 @@ const Dashboard = () => {
         </div>
     );
 
+    // Helper to shorten labels for X-axis
+    const shortLabels = {
+        'Housing & Utilities': 'Housing',
+        'Food & Household': 'Food',
+        'Transportation': 'Transport',
+        'Health & Personal Care': 'Health',
+        'Financial Obligations': 'Bills',
+        'Lifestyle & Entertainment': 'Life',
+        'Assets': 'Assets',
+        'Miscellaneous': 'Misc'
+    };
+
     const expenseData = {
-        labels: Object.keys(report.expenseByCategory),
+        labels: Object.keys(report.expenseByCategory).map(k => shortLabels[k] || k),
         datasets: [{
             label: 'Amount (Ksh)',
             data: Object.values(report.expenseByCategory),
             backgroundColor: ['#0f172a', '#2563eb', '#16a34a', '#dc2626', '#d97706', '#94a3b8', '#8b5cf6', '#ec4899'],
-            borderRadius: 4,
-            barThickness: 20
+            borderRadius: 6,
+            barThickness: 24,
+            maxBarThickness: 32
         }]
     };
 
@@ -855,10 +868,27 @@ const Dashboard = () => {
                                 options={{
                                     responsive: true,
                                     maintainAspectRatio: false,
-                                    plugins: { legend: { display: false } },
+                                    plugins: {
+                                        legend: { display: false },
+                                        tooltip: {
+                                            callbacks: {
+                                                title: (items) => {
+                                                    const key = Object.keys(shortLabels).find(k => shortLabels[k] === items[0].label);
+                                                    return key || items[0].label;
+                                                }
+                                            }
+                                        }
+                                    },
                                     scales: {
-                                        y: { grid: { display: false }, ticks: { color: '#64748b', font: { size: 9, weight: '700' } } },
-                                        x: { grid: { display: false }, ticks: { color: '#0f172a', font: { size: 9, weight: '800' } } }
+                                        y: {
+                                            grid: { color: '#f1f5f9', borderDash: [4, 4] },
+                                            ticks: { color: '#94a3b8', font: { size: 9, weight: '600' } },
+                                            beginAtZero: true
+                                        },
+                                        x: {
+                                            grid: { display: false },
+                                            ticks: { color: '#0f172a', font: { size: 10, weight: '800' }, maxRotation: 0, minRotation: 0 }
+                                        }
                                     }
                                 }}
                             />
