@@ -14,7 +14,7 @@ const Savings = () => {
         try {
             setLoading(true);
             const { data } = await api.get('/savings');
-            setRecords(data);
+            setRecords(data.sort((a, b) => new Date(b.date) - new Date(a.date)));
         } catch (err) {
             console.error('Failed to fetch savings records', err);
         } finally {
@@ -113,7 +113,7 @@ const Savings = () => {
                         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                             <thead>
                                 <tr style={{ background: '#f8fafc' }}>
-                                    <th style={{ textAlign: 'left', padding: '1rem', fontSize: '0.65rem', color: '#64748b', fontWeight: '800', textTransform: 'uppercase' }}>Date</th>
+                                    <th style={{ textAlign: 'left', padding: '1rem', fontSize: '0.65rem', color: '#64748b', fontWeight: '800', textTransform: 'uppercase' }}>Date & Time</th>
                                     <th style={{ textAlign: 'left', padding: '1rem', fontSize: '0.65rem', color: '#64748b', fontWeight: '800', textTransform: 'uppercase' }}>Type</th>
                                     <th style={{ textAlign: 'left', padding: '1rem', fontSize: '0.65rem', color: '#64748b', fontWeight: '800', textTransform: 'uppercase' }}>Amount</th>
                                     <th style={{ textAlign: 'right', padding: '1rem', fontSize: '0.65rem', color: '#64748b', fontWeight: '800', textTransform: 'uppercase' }}>Actions</th>
@@ -124,9 +124,12 @@ const Savings = () => {
                                     <tr key={record._id} style={{ borderBottom: '1px solid #f1f5f9' }}>
                                         <td style={{ padding: '1rem' }}>
                                             <div style={{ fontSize: '0.85rem', fontWeight: '700', color: '#1e293b' }}>
-                                                {new Date(record.date).toLocaleDateString('en-GB')}
+                                                {new Date(record.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
                                             </div>
-                                            <div style={{ fontSize: '0.7rem', color: '#94a3b8' }}>
+                                            <div style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: '600' }}>
+                                                {new Date(record.date).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                                            </div>
+                                            <div style={{ fontSize: '0.65rem', color: '#94a3b8', marginTop: '0.2rem' }}>
                                                 {record.transactionId || 'Manual Entry'}
                                             </div>
                                         </td>
