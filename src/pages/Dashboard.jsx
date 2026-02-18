@@ -2,11 +2,8 @@ import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title } from 'chart.js';
 import { Pie, Bar } from 'react-chartjs-2';
-import {
-    TrendingUp, Wallet, Lightbulb, Target,
-    Smartphone, ChevronLeft, ChevronRight, PlusCircle,
-    MinusCircle, LayoutDashboard, Download, Calendar, X, Save
-} from 'lucide-react';
+import { Share2, TrendingUp, TrendingDown, Wallet, ArrowUpRight, ArrowDownLeft, Download, Upload, CreditCard, LayoutDashboard, ChevronLeft, ChevronRight, Smartphone, Save, MinusCircle, X, Calendar, FileText, Loader, Lightbulb, Target } from 'lucide-react';
+import { generatePDF } from '../utils/pdfExport';
 import { parseMpesaMessage } from '../utils/mpesaParser';
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title);
@@ -28,6 +25,7 @@ const Dashboard = () => {
     const [aiAdvice, setAiAdvice] = useState([]);
     const [loadingAdvice, setLoadingAdvice] = useState(false);
     const [savingsPop, setSavingsPop] = useState(null); // { amount, savings }
+    const [exportingPdf, setExportingPdf] = useState(false);
 
     // Inline Cash-In form state
     const [showCashInForm, setShowCashInForm] = useState(false);
@@ -42,7 +40,7 @@ const Dashboard = () => {
     const [coAmount, setCoAmount] = useState('');
     const [coTitle, setCoTitle] = useState('');
     const [coCategory, setCoCategory] = useState('');
-    const [coDate, setCoDate] = useState(new Date().toLocaleDateString('en-CA', { timeZone: 'Africa/Nairobi' }));
+    const [coDate, setCoDate] = new Date().toLocaleDateString('en-CA', { timeZone: 'Africa/Nairobi' });
     const [coDesc, setCoDesc] = useState('');
     const [coSaving, setCoSaving] = useState(false);
 
@@ -303,6 +301,46 @@ const Dashboard = () => {
         }
     };
 
+    const handleExportPDF = async () => {
+        setExportingPdf(true);
+        try {
+            const [incomeRes, expenseRes] = await Promise.all([
+                api.get('/income'),
+                api.get('/expenses')
+            ]);
+
+            const selectedDate = new Date(month);
+            const y = selectedDate.getFullYear();
+            const m = selectedDate.getMonth();
+
+            const income = incomeRes.data
+                .filter(i => {
+                    const d = new Date(i.date);
+                    return d.getFullYear() === y && d.getMonth() === m;
+                })
+                .map(i => ({ ...i, type: 'income' }));
+
+            const expenses = expenseRes.data
+                .filter(e => {
+                    const d = new Date(e.date);
+                    return d.getFullYear() === y && d.getMonth() === m;
+                })
+                .map(e => ({ ...e, type: 'expense' }));
+
+            const allTransactions = [...income, ...expenses].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            const chartContainer = document.getElementById('dashboard-charts-container');
+
+            await generatePDF(report, allTransactions, chartContainer, month);
+
+        } catch (error) {
+            console.error("Export failed", error);
+            alert("Failed to generate PDF");
+        } finally {
+            setExportingPdf(false);
+        }
+    };
+
 
     if (!report) return (
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh', flexDirection: 'column', gap: '1rem' }}>
@@ -551,8 +589,11 @@ const Dashboard = () => {
                     <p style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: '600' }}>Your financial command center at a glance.</p>
                 </div>
                 <div style={{ display: 'flex', gap: '0.75rem' }}>
-                    <button onClick={handleExport} className="btn" style={{ background: '#f1f5f9', border: '1px solid #e2e8f0', color: '#0f172a', fontWeight: '700', fontSize: '0.75rem' }}>
-                        <Download size={16} /> EXPORT CSV
+                    <button onClick={handleExportPDF} disabled={exportingPdf} className="btn" style={{ background: '#0f172a', border: '1px solid #0f172a', color: '#fff', fontWeight: '700', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem', opacity: exportingPdf ? 0.7 : 1 }}>
+                        {exportingPdf ? <Loader size={16} className="spin" /> : <FileText size={16} />} EXPORT PDF
+                    </button>
+                    <button onClick={handleExport} className="btn" style={{ background: '#f1f5f9', border: '1px solid #e2e8f0', color: '#0f172a', fontWeight: '700', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <Download size={16} /> CSV
                     </button>
                     <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                         <Calendar size={16} style={{ position: 'absolute', left: '10px', color: '#64748b' }} />
@@ -705,7 +746,7 @@ const Dashboard = () => {
                                     {syncing ? 'SYNCING...' : 'CONFIRM & SYNC'}
                                 </button>
                                 <button
-                                    onClick={() => { setParsedData(null); setMpesaText(''); setSelectedGoalId(''); }}
+                                    onClick={() => { setParsedData(null); setMpesaText(''); }}
                                     style={{ flex: 1, padding: '0.6rem', background: '#f1f5f9', color: '#64748b', border: 'none', fontWeight: '800', fontSize: '0.75rem', cursor: 'pointer' }}
                                 >
                                     CANCEL
@@ -861,7 +902,7 @@ const Dashboard = () => {
             </div>
 
             {/* Bottom Analytics */}
-            <div className="dashboard-charts" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', alignItems: 'start' }}>
+            <div id="dashboard-charts-container" className="dashboard-charts" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', alignItems: 'start', padding: '10px 0' }}>
                 <div className="card" style={{ height: '100%' }}>
                     <h3 style={{ marginBottom: '1.5rem', fontSize: '0.85rem', fontWeight: '900', textTransform: 'uppercase', color: '#64748b', letterSpacing: '0.05em' }}>Inflow vs Outflow</h3>
                     <div style={{ height: '300px' }}>
