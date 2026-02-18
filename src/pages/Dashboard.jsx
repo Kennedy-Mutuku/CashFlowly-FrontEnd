@@ -324,12 +324,14 @@ const Dashboard = () => {
         'Miscellaneous': 'MSC'
     };
 
+    const CHART_COLORS = ['#0f172a', '#2563eb', '#16a34a', '#dc2626', '#d97706', '#94a3b8', '#8b5cf6', '#ec4899'];
+
     const expenseData = {
         labels: Object.keys(report.expenseByCategory).map(k => shortLabels[k] || k.substring(0, 3).toUpperCase()),
         datasets: [{
             label: 'Amount (Ksh)',
             data: Object.values(report.expenseByCategory),
-            backgroundColor: ['#0f172a', '#2563eb', '#16a34a', '#dc2626', '#d97706', '#94a3b8', '#8b5cf6', '#ec4899'],
+            backgroundColor: CHART_COLORS,
             borderRadius: 6,
             barThickness: 24,
             maxBarThickness: 32
@@ -895,10 +897,11 @@ const Dashboard = () => {
                                 />
                             </div>
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.5rem 1rem', padding: '0 0.5rem' }}>
-                                {Object.entries(shortLabels).filter(([full]) => Object.keys(report.expenseByCategory).includes(full)).map(([full, abbr], i) => (
-                                    <div key={abbr} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.65rem' }}>
-                                        <span style={{ fontWeight: '900', color: '#0f172a', minWidth: '24px' }}>{abbr}</span>
-                                        <span style={{ color: '#64748b', fontWeight: '500' }}>{full}</span>
+                                {Object.keys(report.expenseByCategory).map((category, i) => (
+                                    <div key={category} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.65rem' }}>
+                                        <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }}></div>
+                                        <span style={{ fontWeight: '900', color: '#0f172a', minWidth: '24px' }}>{shortLabels[category] || category.substring(0, 3).toUpperCase()}</span>
+                                        <span style={{ color: '#64748b', fontWeight: '500' }}>{category}</span>
                                     </div>
                                 ))}
                             </div>
