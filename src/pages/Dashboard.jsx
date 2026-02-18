@@ -312,13 +312,14 @@ const Dashboard = () => {
         </div>
     );
 
-    const pieData = {
+    const expenseData = {
         labels: Object.keys(report.expenseByCategory),
         datasets: [{
+            label: 'Amount (Ksh)',
             data: Object.values(report.expenseByCategory),
-            backgroundColor: ['#0f172a', '#2563eb', '#16a34a', '#dc2626', '#d97706', '#94a3b8'],
-            borderWidth: 2,
-            borderColor: '#fff'
+            backgroundColor: ['#0f172a', '#2563eb', '#16a34a', '#dc2626', '#d97706', '#94a3b8', '#8b5cf6', '#ec4899'],
+            borderRadius: 4,
+            barThickness: 20
         }]
     };
 
@@ -848,8 +849,20 @@ const Dashboard = () => {
                 <div className="card">
                     <h3 style={{ marginBottom: '1.5rem', fontSize: '0.85rem', fontWeight: '900', textTransform: 'uppercase', color: '#64748b', letterSpacing: '0.05em' }}>Expense Breakdown</h3>
                     {Object.keys(report.expenseByCategory).length > 0 ? (
-                        <div style={{ maxWidth: '260px', margin: '0 auto' }}>
-                            <Pie data={pieData} options={{ plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10, weight: '700' }, color: '#444', padding: 15 } } } }} />
+                        <div style={{ height: '240px' }}>
+                            <Bar
+                                data={expenseData}
+                                options={{
+                                    indexAxis: 'y',
+                                    responsive: true,
+                                    maintainAspectRatio: false,
+                                    plugins: { legend: { display: false } },
+                                    scales: {
+                                        x: { grid: { display: false }, ticks: { color: '#64748b', font: { size: 9, weight: '700' } } },
+                                        y: { grid: { display: false }, ticks: { color: '#0f172a', font: { size: 10, weight: '800' } } }
+                                    }
+                                }}
+                            />
                         </div>
                     ) : (
                         <div style={{ textAlign: 'center', padding: '4rem', color: '#94a3b8', fontSize: '0.85rem', border: '1px dashed #e2e8f0' }}>NO EXPENSES DATA FOUND</div>
