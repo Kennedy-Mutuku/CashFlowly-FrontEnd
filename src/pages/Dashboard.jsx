@@ -344,7 +344,7 @@ const Dashboard = () => {
             data: [report.totalIncome, report.totalExpenses],
             backgroundColor: ['#16a34a', '#dc2626'],
             borderRadius: 0,
-            barThickness: 40
+            barThickness: 20
         }]
     };
 
@@ -862,6 +862,17 @@ const Dashboard = () => {
             {/* Bottom Analytics */}
             <div className="dashboard-charts" style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: '1.5rem' }}>
                 <div className="card">
+                    <h3 style={{ marginBottom: '1.5rem', fontSize: '0.85rem', fontWeight: '900', textTransform: 'uppercase', color: '#64748b', letterSpacing: '0.05em' }}>Inflow vs Outflow</h3>
+                    <Bar data={barData} options={{
+                        responsive: true,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            y: { grid: { borderDash: [5, 5], color: '#f1f5f9' }, ticks: { color: '#64748b', font: { size: 10, weight: '700' } } },
+                            x: { grid: { display: false }, ticks: { color: '#0f172a', font: { size: 11, weight: '800' } } }
+                        }
+                    }} />
+                </div>
+                <div className="card">
                     <h3 style={{ marginBottom: '1.5rem', fontSize: '0.85rem', fontWeight: '900', textTransform: 'uppercase', color: '#64748b', letterSpacing: '0.05em' }}>Expense Breakdown</h3>
                     {Object.keys(report.expenseByCategory).length > 0 ? (
                         <>
@@ -909,17 +920,6 @@ const Dashboard = () => {
                     ) : (
                         <div style={{ textAlign: 'center', padding: '4rem', color: '#94a3b8', fontSize: '0.85rem', border: '1px dashed #e2e8f0' }}>NO EXPENSES DATA FOUND</div>
                     )}
-                </div>
-                <div className="card">
-                    <h3 style={{ marginBottom: '1.5rem', fontSize: '0.85rem', fontWeight: '900', textTransform: 'uppercase', color: '#64748b', letterSpacing: '0.05em' }}>Inflow vs Outflow</h3>
-                    <Bar data={barData} options={{
-                        responsive: true,
-                        plugins: { legend: { display: false } },
-                        scales: {
-                            y: { grid: { borderDash: [5, 5], color: '#f1f5f9' }, ticks: { color: '#64748b', font: { size: 10, weight: '700' } } },
-                            x: { grid: { display: false }, ticks: { color: '#0f172a', font: { size: 11, weight: '800' } } }
-                        }
-                    }} />
                 </div>
             </div>
         </div>
