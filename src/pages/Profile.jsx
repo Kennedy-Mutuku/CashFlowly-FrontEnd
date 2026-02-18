@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
-import { User, Mail, Phone, TrendingUp, Save, AlertCircle, CheckCircle } from 'lucide-react';
+import { User, Mail, Phone, TrendingUp, Save, AlertCircle, CheckCircle, Eye, EyeOff } from 'lucide-react';
 
 const Profile = () => {
     const { user, setUser } = useAuth();
@@ -16,6 +16,8 @@ const Profile = () => {
     const [message, setMessage] = useState(null);
     const [error, setError] = useState(null);
     const [loading, setLoading] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -121,12 +123,68 @@ const Profile = () => {
 
                             <div className="input-group">
                                 <label style={{ color: '#475569', fontWeight: '700', fontSize: '0.75rem', textTransform: 'uppercase' }}>New Password</label>
-                                <input name="password" type="password" value={formData.password} onChange={handleChange} placeholder="••••••••" />
+                                <div style={{ position: 'relative' }}>
+                                    <input
+                                        name="password"
+                                        type={showPassword ? "text" : "password"}
+                                        value={formData.password}
+                                        onChange={handleChange}
+                                        placeholder="••••••••"
+                                        style={{ paddingRight: '2.5rem' }}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                        style={{
+                                            position: 'absolute',
+                                            right: '8px',
+                                            top: '50%',
+                                            transform: 'translateY(-50%)',
+                                            background: 'none',
+                                            border: 'none',
+                                            color: '#94a3b8',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            padding: '2px',
+                                            cursor: 'pointer'
+                                        }}
+                                    >
+                                        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                                    </button>
+                                </div>
                             </div>
 
                             <div className="input-group">
                                 <label style={{ color: '#475569', fontWeight: '700', fontSize: '0.75rem', textTransform: 'uppercase' }}>Confirm New Password</label>
-                                <input name="confirmPassword" type="password" value={formData.confirmPassword} onChange={handleChange} placeholder="••••••••" />
+                                <div style={{ position: 'relative' }}>
+                                    <input
+                                        name="confirmPassword"
+                                        type={showConfirmPassword ? "text" : "password"}
+                                        value={formData.confirmPassword}
+                                        onChange={handleChange}
+                                        placeholder="••••••••"
+                                        style={{ paddingRight: '2.5rem' }}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                        style={{
+                                            position: 'absolute',
+                                            right: '8px',
+                                            top: '50%',
+                                            transform: 'translateY(-50%)',
+                                            background: 'none',
+                                            border: 'none',
+                                            color: '#94a3b8',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            padding: '2px',
+                                            cursor: 'pointer'
+                                        }}
+                                    >
+                                        {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>

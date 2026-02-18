@@ -3,13 +3,19 @@ import api from '../services/api';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title } from 'chart.js';
 import { Pie, Bar } from 'react-chartjs-2';
 import {
-    Banknote, TrendingDown, TrendingUp, Wallet, Lightbulb,
+    TrendingUp, Wallet, Lightbulb,
     Smartphone, ChevronLeft, ChevronRight, PlusCircle,
-    MinusCircle, LayoutDashboard, Download, Calendar
+    MinusCircle, LayoutDashboard, Download, Calendar, X, Save
 } from 'lucide-react';
 import { parseMpesaMessage } from '../utils/mpesaParser';
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title);
+
+const TYPE_LABELS = {
+    income: { label: '✓ INCOME DETECTED', color: '#16a34a', bg: '#bbf7d0' },
+    expense: { label: '✗ EXPENSE DETECTED', color: '#dc2626', bg: '#fee2e2' },
+    savings: { label: '🏦 SAVINGS DETECTED', color: '#2563eb', bg: '#dbeafe' },
+};
 
 const Dashboard = () => {
     const [report, setReport] = useState(null);
@@ -18,6 +24,63 @@ const Dashboard = () => {
     const [mpesaText, setMpesaText] = useState('');
     const [parsedData, setParsedData] = useState(null);
     const [activeSlide, setActiveSlide] = useState(0);
+    const [selectedGoalId, setSelectedGoalId] = useState('');
+    const [syncing, setSyncing] = useState(false);
+
+    // Inline Cash-In form state
+    const [showCashInForm, setShowCashInForm] = useState(false);
+    const [ciAmount, setCiAmount] = useState('');
+    const [ciSource, setCiSource] = useState('');
+    const [ciDate, setCiDate] = useState(new Date().toLocaleDateString('en-CA', { timeZone: 'Africa/Nairobi' }));
+    const [ciDesc, setCiDesc] = useState('');
+    const [ciSaving, setCiSaving] = useState(false);
+
+    // Inline Cash-Out form state
+    const [showCashOutForm, setShowCashOutForm] = useState(false);
+    const [coAmount, setCoAmount] = useState('');
+    const [coTitle, setCoTitle] = useState('');
+    const [coCategory, setCoCategory] = useState('');
+    const [coDate, setCoDate] = useState(new Date().toLocaleDateString('en-CA', { timeZone: 'Africa/Nairobi' }));
+    const [coDesc, setCoDesc] = useState('');
+    const [coSaving, setCoSaving] = useState(false);
+
+    // Success toast overlay — pauseable on press
+    const [toast, setToast] = useState(null); // { amount, label, type, detail }
+    const [toastPaused, setToastPaused] = useState(false);
+    const toastTimerRef = React.useRef(null);
+    const toastStartRef = React.useRef(null);
+    const toastRemainingRef = React.useRef(2800);
+
+    const TOAST_CONFIG = {
+        income: { color: '#16a34a', bg: '#f0fdf4', border: '#bbf7d0', label: 'Income Recorded', verb: 'logged to your Cash In records' },
+        expense: { color: '#dc2626', bg: '#fef2f2', border: '#fecaca', label: 'Expense Recorded', verb: 'saved to your Cash Out records' },
+        savings: { color: '#2563eb', bg: '#eff6ff', border: '#bfdbfe', label: 'Savings Updated', verb: 'added to your savings goal' },
+    };
+
+    const showToast = (amount, detail, type = 'income') => {
+        setToast({ amount, detail, type });
+        setToastPaused(false);
+        toastRemainingRef.current = 2800;
+        toastStartRef.current = Date.now();
+        toastTimerRef.current = setTimeout(() => setToast(null), 2800);
+    };
+
+    const handleToastPressStart = () => {
+        if (!toast) return;
+        // Pause: clear timer, record elapsed
+        clearTimeout(toastTimerRef.current);
+        const elapsed = Date.now() - toastStartRef.current;
+        toastRemainingRef.current = Math.max(0, toastRemainingRef.current - elapsed);
+        setToastPaused(true);
+    };
+
+    const handleToastPressEnd = () => {
+        if (!toast) return;
+        // Resume: restart timer with remaining time
+        setToastPaused(false);
+        toastStartRef.current = Date.now();
+        toastTimerRef.current = setTimeout(() => setToast(null), toastRemainingRef.current);
+    };
 
     useEffect(() => {
         fetchReport();
@@ -29,40 +92,151 @@ const Dashboard = () => {
         setMpesaText(text);
         const parsed = parseMpesaMessage(text);
         if (parsed) {
+            // Force categories to be selected manually for expenses to match manual entries
+            if (parsed.type === 'expense') {
+                parsed.category = '';
+            }
             setParsedData(parsed);
+            // Pre-select first goal if savings type
+            if (parsed.type === 'savings' && goals.length > 0) {
+                setSelectedGoalId(goals[0]._id);
+            }
+        } else {
+            setParsedData(null);
         }
     };
 
     const confirmQuickAdd = async () => {
-        const payload = {
-            title: parsedData.title,
-            amount: parsedData.amount,
-            date: parsedData.time ? `${parsedData.date}T${parsedData.time}` : parsedData.date,
-            description: parsedData.description || '',
-            paymentMethod: 'M-PESA',
-            transactionId: parsedData.transactionId
-        };
+        if (!parsedData) return;
+        setSyncing(true);
 
-        if (parsedData.type === 'income') {
-            payload.source = parsedData.partner;
-        } else {
-            payload.category = parsedData.category || 'Other';
-        }
-
-        const endpoint = parsedData.type === 'income' ? '/income' : '/expenses';
         try {
-            await api.post(endpoint, payload);
+            if (parsedData.type === 'savings') {
+                // Route to savings goal
+                if (!selectedGoalId) {
+                    alert('Please select a savings goal to contribute to.');
+                    setSyncing(false);
+                    return;
+                }
+                const goal = goals.find(g => g._id === selectedGoalId);
+                if (!goal) {
+                    alert('Selected goal not found.');
+                    setSyncing(false);
+                    return;
+                }
+                await api.put(`/savings/${selectedGoalId}`, {
+                    currentAmount: goal.currentAmount + parseFloat(parsedData.amount),
+                    transactionId: parsedData.transactionId,
+                });
+                fetchGoals();
+                showToast(parsedData.amount, goal.name, 'savings');
+            } else {
+                // Route to income or expense
+                const payload = {
+                    title: parsedData.title,
+                    amount: parsedData.amount,
+                    date: parsedData.time ? `${parsedData.date}T${parsedData.time}` : parsedData.date,
+                    description: parsedData.description || '',
+                    paymentMethod: 'M-PESA',
+                    transactionId: parsedData.transactionId,
+                };
+
+                if (parsedData.type === 'income') {
+                    payload.source = parsedData.partner;
+                } else {
+                    if (!parsedData.category) {
+                        alert('Please select a category for this expense.');
+                        setSyncing(false);
+                        return;
+                    }
+                    payload.category = parsedData.category;
+                }
+
+                const endpoint = parsedData.type === 'income' ? '/income' : '/expenses';
+                await api.post(endpoint, payload);
+                fetchReport();
+                showToast(
+                    parsedData.amount,
+                    parsedData.type === 'income' ? parsedData.partner : parsedData.title,
+                    parsedData.type
+                );
+            }
+
             setMpesaText('');
             setParsedData(null);
-            fetchReport();
-            alert('Transaction synchronized successfully!');
+            setSelectedGoalId('');
         } catch (err) {
             console.error(err);
-            if (err.response?.data?.message?.includes('duplicate key') || err.response?.data?.message?.includes('E11000') || err.response?.status === 400) {
-                alert('This transaction has already been recorded in your history.');
+            if (
+                err.response?.data?.message?.includes('duplicate key') ||
+                err.response?.data?.message?.includes('E11000') ||
+                err.response?.status === 400
+            ) {
+                alert('⚠️ This transaction has already been recorded in your history.');
             } else {
-                alert('Failed to sync transaction. Please check all fields.');
+                alert('❌ Failed to sync transaction. Please check all fields.');
             }
+        } finally {
+            setSyncing(false);
+        }
+    };
+
+    const handleCashInSubmit = async (e) => {
+        e.preventDefault();
+        setCiSaving(true);
+        try {
+            await api.post('/income', {
+                amount: ciAmount,
+                source: ciSource,
+                title: ciSource, // use source as title for simplicity
+                date: ciDate,
+                description: ciDesc,
+                paymentMethod: 'Cash',
+            });
+            const savedAmount = ciAmount;
+            const savedSource = ciSource;
+            setCiAmount('');
+            setCiSource('');
+            setCiDate(new Date().toLocaleDateString('en-CA', { timeZone: 'Africa/Nairobi' }));
+            setCiDesc('');
+            setShowCashInForm(false);
+            fetchReport();
+            showToast(savedAmount, savedSource);
+        } catch (err) {
+            console.error(err);
+            alert('Failed to save income. Please check your entries and try again.');
+        } finally {
+            setCiSaving(false);
+        }
+    };
+
+    const handleCashOutSubmit = async (e) => {
+        e.preventDefault();
+        setCoSaving(true);
+        try {
+            await api.post('/expenses', {
+                amount: coAmount,
+                title: coTitle,
+                category: coCategory,
+                date: coDate,
+                description: coDesc,
+                paymentMethod: 'Cash',
+            });
+            const savedAmount = coAmount;
+            const savedTitle = coTitle;
+            setCoAmount('');
+            setCoTitle('');
+            setCoCategory('');
+            setCoDate(new Date().toLocaleDateString('en-CA', { timeZone: 'Africa/Nairobi' }));
+            setCoDesc('');
+            setShowCashOutForm(false);
+            fetchReport();
+            showToast(savedAmount, savedTitle, 'expense');
+        } catch (err) {
+            console.error(err);
+            alert('Failed to save expense. Please check your entries and try again.');
+        } finally {
+            setCoSaving(false);
         }
     };
 
@@ -148,6 +322,8 @@ const Dashboard = () => {
         }
     ];
 
+    const typeInfo = parsedData ? TYPE_LABELS[parsedData.type] : null;
+
     return (
         <div style={{ animation: 'fadeIn 0.5s ease-out' }}>
             <style>{`
@@ -155,7 +331,84 @@ const Dashboard = () => {
                 @keyframes ticker { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
                 .ticker-item { display: inline-block; padding: 0 4rem; font-size: 0.8rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; }
                 .ticker-item span { color: #94a3b8; margin-right: 0.5rem; }
+                @keyframes toastIn { from { opacity: 0; transform: translate(-50%, -48%) scale(0.95); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
+                @keyframes drainBar { from { width: 100%; } to { width: 0%; } }
+                @keyframes toastOut { from { opacity: 1; } to { opacity: 0; } }
             `}</style>
+
+            {toast && (() => {
+                const cfg = TOAST_CONFIG[toast.type] || TOAST_CONFIG.income;
+                return (
+                    <div style={{
+                        position: 'fixed', inset: 0, zIndex: 9999,
+                        backdropFilter: 'blur(6px)',
+                        WebkitBackdropFilter: 'blur(6px)',
+                        background: 'rgba(15, 23, 42, 0.55)',
+                        animation: 'fadeIn 0.3s ease'
+                    }}>
+                        <div
+                            onMouseDown={handleToastPressStart}
+                            onMouseUp={handleToastPressEnd}
+                            onMouseLeave={handleToastPressEnd}
+                            onTouchStart={handleToastPressStart}
+                            onTouchEnd={handleToastPressEnd}
+                            style={{
+                                position: 'absolute', top: '50%', left: '50%',
+                                transform: 'translate(-50%, -50%)',
+                                background: '#fff',
+                                borderTop: `5px solid ${cfg.color}`,
+                                padding: '2.5rem 3rem',
+                                minWidth: '340px',
+                                maxWidth: '480px',
+                                textAlign: 'center',
+                                boxShadow: '0 25px 60px rgba(0,0,0,0.25)',
+                                animation: 'toastIn 0.35s cubic-bezier(0.34,1.56,0.64,1)',
+                                cursor: 'default',
+                                userSelect: 'none'
+                            }}
+                        >
+                            {/* Icon */}
+                            <div style={{
+                                width: '60px', height: '60px', borderRadius: '50%',
+                                background: cfg.bg, border: `2px solid ${cfg.border}`,
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                margin: '0 auto 1.25rem'
+                            }}>
+                                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={cfg.color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                    <polyline points="20 6 9 17 4 12" />
+                                </svg>
+                            </div>
+
+                            {/* Label */}
+                            <div style={{ fontSize: '0.65rem', fontWeight: '800', color: cfg.color, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '0.5rem' }}>
+                                {cfg.label}
+                            </div>
+
+                            {/* Amount */}
+                            <div style={{ fontSize: '2rem', fontWeight: '900', color: '#0f172a', letterSpacing: '-0.03em', marginBottom: '0.4rem' }}>
+                                Ksh {parseFloat(toast.amount).toLocaleString()}
+                            </div>
+
+                            {/* Message */}
+                            <p style={{ fontSize: '0.88rem', color: '#475569', fontWeight: '500', lineHeight: '1.6', marginBottom: '1.5rem' }}>
+                                Thank you for keeping your finances in order.<br />
+                                <strong style={{ color: '#0f172a' }}>{toast.detail}</strong> has been {cfg.verb}.
+                            </p>
+
+                            {/* Auto-dismiss progress bar */}
+                            <div style={{ width: '100%', height: '3px', background: '#f1f5f9', overflow: 'hidden' }}>
+                                <div style={{
+                                    height: '100%',
+                                    background: cfg.color,
+                                    animation: 'drainBar 2.8s linear forwards',
+                                    animationPlayState: toastPaused ? 'paused' : 'running'
+                                }} />
+                            </div>
+                        </div>
+                    </div>
+                );
+            })()}
+
 
             {/* Live Financial Ticker */}
             <div style={{
@@ -203,24 +456,29 @@ const Dashboard = () => {
 
             {/* Quick Action Hub */}
             <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '1.5rem', marginBottom: '2rem' }}>
-                <div className="card" style={{ background: '#f8fafc', border: '2px dashed #cbd5e1', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                {/* M-PESA Smart Sync — Central Hub */}
+                <div className="card" style={{ background: '#f8fafc', border: '2px dashed #cbd5e1', display: 'flex', flexDirection: 'column', justifyContent: 'flex-start' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                         <h3 style={{ fontSize: '0.9rem', fontWeight: '900', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                             <Smartphone size={18} color="#2563eb" /> SMART M-PESA SYNC
                         </h3>
-                        <span style={{ fontSize: '0.65rem', padding: '0.2rem 0.5rem', background: '#e0e7ff', color: '#4338ca', fontWeight: '800' }}>AUTOMATED ENTRY</span>
+                        <span style={{ fontSize: '0.65rem', padding: '0.2rem 0.5rem', background: '#e0e7ff', color: '#4338ca', fontWeight: '800' }}>AUTO-CLASSIFY</span>
                     </div>
+                    <p style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '600', marginBottom: '0.75rem' }}>
+                        Paste any M-PESA message — the system automatically detects if it's <strong>income</strong>, <strong>spending</strong>, or <strong>savings</strong>.
+                    </p>
                     <textarea
-                        placeholder="PASTE M-PESA SMS HERE TO AUTO-SYNC..."
+                        placeholder="PASTE ANY M-PESA SMS HERE..."
                         value={mpesaText}
                         onChange={handleMpesaPaste}
-                        style={{ height: '70px', background: '#fff', fontSize: '0.85rem', padding: '0.8rem', border: '1px solid #e2e8f0' }}
+                        style={{ height: '70px', background: '#fff', fontSize: '0.85rem', padding: '0.8rem', border: '1px solid #e2e8f0', resize: 'none' }}
                     />
-                    {parsedData && (
-                        <div style={{ marginTop: '1rem', padding: '1.25rem', background: '#fff', border: `1px solid ${parsedData.type === 'income' ? '#bbf7d0' : '#fee2e2'}`, borderRadius: '4px', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}>
+
+                    {parsedData && typeInfo && (
+                        <div style={{ marginTop: '1rem', padding: '1.25rem', background: '#fff', border: `1px solid ${typeInfo.bg}`, borderRadius: '4px', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}>
                             <div style={{ marginBottom: '1rem', borderBottom: '1px solid #f1f5f9', paddingBottom: '0.5rem', display: 'flex', justifyContent: 'space-between' }}>
-                                <span style={{ fontSize: '0.7rem', fontWeight: '800', color: parsedData.type === 'income' ? '#16a34a' : '#dc2626' }}>
-                                    {parsedData.type === 'income' ? '✓ INCOME DETECTED' : '✗ EXPENSE DETECTED'}
+                                <span style={{ fontSize: '0.7rem', fontWeight: '800', color: typeInfo.color }}>
+                                    {typeInfo.label}
                                 </span>
                                 <span style={{ fontSize: '0.65rem', color: '#94a3b8', fontWeight: '700' }}>SYNC PREVIEW</span>
                             </div>
@@ -236,7 +494,7 @@ const Dashboard = () => {
                                     />
                                 </div>
                                 <div className="input-group">
-                                    <label style={{ fontSize: '0.65rem', marginBottom: '0.25rem' }}>Date & Time</label>
+                                    <label style={{ fontSize: '0.65rem', marginBottom: '0.25rem' }}>Date &amp; Time</label>
                                     <div style={{ display: 'flex', gap: '0.5rem' }}>
                                         <input
                                             type="date"
@@ -255,52 +513,91 @@ const Dashboard = () => {
                                 </div>
                             </div>
 
-                            <div className="input-group" style={{ marginBottom: '0.75rem' }}>
-                                <label style={{ fontSize: '0.65rem', marginBottom: '0.25rem' }}>{parsedData.type === 'income' ? 'Source / Partner' : 'Item Name / Recipient'}</label>
-                                <input
-                                    type="text"
-                                    value={parsedData.type === 'income' ? parsedData.partner : parsedData.title}
-                                    onChange={(e) => parsedData.type === 'income' ? setParsedData({ ...parsedData, partner: e.target.value }) : setParsedData({ ...parsedData, title: e.target.value })}
-                                    style={{ padding: '0.4rem', fontSize: '0.8rem', fontWeight: '700' }}
-                                />
-                            </div>
+                            {/* Savings: show goal selector */}
+                            {parsedData.type === 'savings' && (
+                                <div className="input-group" style={{ marginBottom: '0.75rem' }}>
+                                    <label style={{ fontSize: '0.65rem', marginBottom: '0.25rem' }}>CONTRIBUTE TO SAVINGS GOAL</label>
+                                    {goals.length > 0 ? (
+                                        <select
+                                            value={selectedGoalId}
+                                            onChange={(e) => setSelectedGoalId(e.target.value)}
+                                            style={{ padding: '0.4rem', fontSize: '0.8rem', border: '1px solid #e2e8f0' }}
+                                        >
+                                            {goals.map(goal => (
+                                                <option key={goal._id} value={goal._id}>
+                                                    {goal.name.toUpperCase()} — Ksh {goal.currentAmount.toLocaleString()} / {goal.targetAmount.toLocaleString()}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    ) : (
+                                        <p style={{ fontSize: '0.8rem', color: '#dc2626', fontWeight: '600' }}>
+                                            No savings goals found. <a href="/savings" style={{ color: '#2563eb' }}>Create one first →</a>
+                                        </p>
+                                    )}
+                                </div>
+                            )}
 
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: '0.75rem', marginBottom: '1rem' }}>
-                                {parsedData.type === 'expense' && (
+                            {/* Income: show source/partner */}
+                            {parsedData.type === 'income' && (
+                                <div className="input-group" style={{ marginBottom: '0.75rem' }}>
+                                    <label style={{ fontSize: '0.65rem', marginBottom: '0.25rem' }}>Source / Sender</label>
+                                    <input
+                                        type="text"
+                                        value={parsedData.partner}
+                                        onChange={(e) => setParsedData({ ...parsedData, partner: e.target.value })}
+                                        style={{ padding: '0.4rem', fontSize: '0.8rem', fontWeight: '700' }}
+                                    />
+                                </div>
+                            )}
+
+                            {/* Expense: show recipient + category */}
+                            {parsedData.type === 'expense' && (
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                                    <div className="input-group">
+                                        <label style={{ fontSize: '0.65rem', marginBottom: '0.25rem' }}>Recipient / Item</label>
+                                        <input
+                                            type="text"
+                                            value={parsedData.title}
+                                            onChange={(e) => setParsedData({ ...parsedData, title: e.target.value })}
+                                            style={{ padding: '0.4rem', fontSize: '0.8rem', fontWeight: '700' }}
+                                        />
+                                    </div>
                                     <div className="input-group">
                                         <label style={{ fontSize: '0.65rem', marginBottom: '0.25rem' }}>Category</label>
                                         <select
-                                            value={parsedData.category || 'Other'}
+                                            value={parsedData.category || ''}
                                             onChange={(e) => setParsedData({ ...parsedData, category: e.target.value })}
-                                            style={{ padding: '0.4rem', fontSize: '0.8rem' }}
+                                            style={{ padding: '0.4rem', fontSize: '0.8rem', border: parsedData.category ? '1px solid #e2e8f0' : '2px solid #ef4444' }}
+                                            required
                                         >
-                                            {['Food', 'Transport', 'Rent', 'Utilities', 'Entertainment', 'Other'].map(cat => (
+                                            <option value="" disabled>Select a category</option>
+                                            {[
+                                                'Housing & Utilities',
+                                                'Food & Household',
+                                                'Transportation',
+                                                'Health & Personal Care',
+                                                'Financial Obligations',
+                                                'Lifestyle & Entertainment',
+                                                'Assets',
+                                                'Miscellaneous',
+                                            ].map(cat => (
                                                 <option key={cat} value={cat}>{cat}</option>
                                             ))}
                                         </select>
                                     </div>
-                                )}
-                                <div className="input-group">
-                                    <label style={{ fontSize: '0.65rem', marginBottom: '0.25rem' }}>Description (Optional)</label>
-                                    <input
-                                        type="text"
-                                        placeholder="Add notes..."
-                                        value={parsedData.description || ''}
-                                        onChange={(e) => setParsedData({ ...parsedData, description: e.target.value })}
-                                        style={{ padding: '0.4rem', fontSize: '0.8rem' }}
-                                    />
                                 </div>
-                            </div>
+                            )}
 
                             <div style={{ display: 'flex', gap: '0.5rem' }}>
                                 <button
                                     onClick={confirmQuickAdd}
-                                    style={{ flex: 2, padding: '0.6rem', background: '#0f172a', color: '#fff', border: 'none', fontWeight: '900', fontSize: '0.75rem', cursor: 'pointer' }}
+                                    disabled={syncing}
+                                    style={{ flex: 2, padding: '0.6rem', background: typeInfo.color, color: '#fff', border: 'none', fontWeight: '900', fontSize: '0.75rem', cursor: 'pointer', opacity: syncing ? 0.7 : 1 }}
                                 >
-                                    CONFIRM & SYNC
+                                    {syncing ? 'SYNCING...' : 'CONFIRM & SYNC'}
                                 </button>
                                 <button
-                                    onClick={() => setParsedData(null)}
+                                    onClick={() => { setParsedData(null); setMpesaText(''); setSelectedGoalId(''); }}
                                     style={{ flex: 1, padding: '0.6rem', background: '#f1f5f9', color: '#64748b', border: 'none', fontWeight: '800', fontSize: '0.75rem', cursor: 'pointer' }}
                                 >
                                     CANCEL
@@ -310,14 +607,106 @@ const Dashboard = () => {
                     )}
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                    <div className="card" onClick={() => window.location.href = '/income'} style={{ background: '#0f172a', color: '#fff', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
-                        <PlusCircle size={28} color="#22c55e" />
-                        <span style={{ fontSize: '0.7rem', fontWeight: '900', letterSpacing: '0.05em' }}>RECORD CASH IN</span>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    {/* RECORD CASH IN button + inline form */}
+                    <div>
+                        <div
+                            className="card"
+                            onClick={() => { setShowCashInForm(v => !v); }}
+                            style={{ background: '#0f172a', color: '#fff', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', padding: '1.25rem' }}
+                        >
+                            <PlusCircle size={28} color="#22c55e" />
+                            <span style={{ fontSize: '0.7rem', fontWeight: '900', letterSpacing: '0.05em' }}>RECORD CASH IN</span>
+                        </div>
+
+                        {showCashInForm && (
+                            <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', padding: '1.25rem', marginTop: '0.5rem', animation: 'fadeIn 0.2s ease' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                                    <span style={{ fontSize: '0.75rem', fontWeight: '900', color: '#16a34a', textTransform: 'uppercase' }}>New Income Entry</span>
+                                    <button onClick={() => setShowCashInForm(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' }}><X size={16} /></button>
+                                </div>
+                                <form onSubmit={handleCashInSubmit}>
+                                    <div className="input-group">
+                                        <label style={{ fontSize: '0.65rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>Amount (Ksh)</label>
+                                        <input type="number" value={ciAmount} onChange={e => setCiAmount(e.target.value)} required placeholder="0.00" style={{ padding: '0.45rem', fontSize: '0.9rem', fontWeight: '800' }} />
+                                    </div>
+                                    <div className="input-group">
+                                        <label style={{ fontSize: '0.65rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>Source of Income</label>
+                                        <input type="text" value={ciSource} onChange={e => setCiSource(e.target.value)} required placeholder="e.g. Salary, Freelance, Business" style={{ padding: '0.45rem', fontSize: '0.85rem' }} />
+                                    </div>
+                                    <div className="input-group">
+                                        <label style={{ fontSize: '0.65rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>Date</label>
+                                        <input type="date" value={ciDate} onChange={e => setCiDate(e.target.value)} required style={{ padding: '0.45rem', fontSize: '0.85rem' }} />
+                                    </div>
+                                    <div className="input-group">
+                                        <label style={{ fontSize: '0.65rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>Description (Optional)</label>
+                                        <input type="text" value={ciDesc} onChange={e => setCiDesc(e.target.value)} placeholder="Add a note..." style={{ padding: '0.45rem', fontSize: '0.85rem' }} />
+                                    </div>
+                                    <button type="submit" disabled={ciSaving} style={{ width: '100%', padding: '0.6rem', background: '#16a34a', color: '#fff', border: 'none', fontWeight: '900', fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', opacity: ciSaving ? 0.7 : 1 }}>
+                                        <Save size={14} /> {ciSaving ? 'SAVING...' : 'SAVE INCOME'}
+                                    </button>
+                                </form>
+                            </div>
+                        )}
                     </div>
-                    <div className="card" onClick={() => window.location.href = '/expenses'} style={{ background: '#0f172a', color: '#fff', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
-                        <MinusCircle size={28} color="#ef4444" />
-                        <span style={{ fontSize: '0.7rem', fontWeight: '900', letterSpacing: '0.05em' }}>RECORD CASH OUT</span>
+
+                    <div>
+                        <div
+                            className="card"
+                            onClick={() => { setShowCashOutForm(v => !v); if (showCashInForm) setShowCashInForm(false); }}
+                            style={{ background: '#0f172a', color: '#fff', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', padding: '1.25rem' }}
+                        >
+                            <MinusCircle size={28} color="#ef4444" />
+                            <span style={{ fontSize: '0.7rem', fontWeight: '900', letterSpacing: '0.05em' }}>RECORD CASH OUT</span>
+                        </div>
+
+                        {showCashOutForm && (
+                            <div style={{ background: '#fef2f2', border: '1px solid #fecaca', padding: '1.25rem', marginTop: '0.5rem', animation: 'fadeIn 0.2s ease' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                                    <span style={{ fontSize: '0.75rem', fontWeight: '900', color: '#dc2626', textTransform: 'uppercase' }}>New Expense Entry</span>
+                                    <button onClick={() => setShowCashOutForm(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' }}><X size={16} /></button>
+                                </div>
+                                <form onSubmit={handleCashOutSubmit}>
+                                    <div className="input-group">
+                                        <label style={{ fontSize: '0.65rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>Category</label>
+                                        <select value={coCategory} onChange={e => setCoCategory(e.target.value)} required style={{ padding: '0.45rem', fontSize: '0.85rem' }}>
+                                            <option value="" disabled>Select a category</option>
+                                            {[
+                                                'Housing & Utilities',
+                                                'Food & Household',
+                                                'Transportation',
+                                                'Health & Personal Care',
+                                                'Financial Obligations',
+                                                'Lifestyle & Entertainment',
+                                                'Assets',
+                                                'Miscellaneous',
+                                            ].map(c => (
+                                                <option key={c} value={c}>{c}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div className="input-group">
+                                        <label style={{ fontSize: '0.65rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>Item / Description</label>
+                                        <input type="text" value={coTitle} onChange={e => setCoTitle(e.target.value)} required placeholder="e.g. Groceries, Uber, Rent" style={{ padding: '0.45rem', fontSize: '0.85rem' }} />
+                                    </div>
+                                    <div className="input-group">
+                                        <label style={{ fontSize: '0.65rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>Amount (Ksh)</label>
+                                        <input type="number" value={coAmount} onChange={e => setCoAmount(e.target.value)} required placeholder="0.00" style={{ padding: '0.45rem', fontSize: '0.9rem', fontWeight: '800' }} />
+                                    </div>
+                                    <div className="input-group">
+                                        <label style={{ fontSize: '0.65rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>Date</label>
+                                        <input type="date" value={coDate} onChange={e => setCoDate(e.target.value)} required style={{ padding: '0.45rem', fontSize: '0.85rem' }} />
+                                    </div>
+                                    <div className="input-group">
+                                        <label style={{ fontSize: '0.65rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>Notes (Optional)</label>
+                                        <input type="text" value={coDesc} onChange={e => setCoDesc(e.target.value)} placeholder="Add a note..." style={{ padding: '0.45rem', fontSize: '0.85rem' }} />
+                                    </div>
+                                    <button type="submit" disabled={coSaving} style={{ width: '100%', padding: '0.6rem', background: '#dc2626', color: '#fff', border: 'none', fontWeight: '900', fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', opacity: coSaving ? 0.7 : 1 }}>
+                                        <Save size={14} /> {coSaving ? 'SAVING...' : 'SAVE EXPENSE'}
+                                    </button>
+                                </form>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>

@@ -1,201 +1,138 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
-import { Plus, Trash2, Smartphone, Target } from 'lucide-react';
-import { parseMpesaMessage } from '../utils/mpesaParser';
-import { useMpesaListener } from '../hooks/useMpesaListener';
+import { Trash2, TrendingUp } from 'lucide-react';
 
 const Income = () => {
     const [incomes, setIncomes] = useState([]);
-    const [amount, setAmount] = useState('');
-    const [title, setTitle] = useState('');
-    const [source, setSource] = useState('');
-    const [date, setDate] = useState(new Date().toLocaleDateString('en-CA', { timeZone: 'Africa/Nairobi' })); // en-CA gives YYYY-MM-DD
-    const [description, setDescription] = useState('');
-    const [mpesaText, setMpesaText] = useState('');
-    const [paymentMethod, setPaymentMethod] = useState('Cash');
-    const [transactionId, setTransactionId] = useState('');
-    const [time, setTime] = useState(new Date().toLocaleTimeString('en-GB', { timeZone: 'Africa/Nairobi', hour: '2-digit', minute: '2-digit' }));
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         fetchIncomes();
     }, []);
 
-    // Listen for background M-PESA messages
-    useMpesaListener((parsed) => {
-        if (parsed && parsed.type === 'income') {
-            setAmount(parsed.amount);
-            setSource(parsed.partner);
-            setTitle(parsed.title);
-            setDate(parsed.date);
-            setTime(parsed.time);
-            setPaymentMethod('M-PESA');
-            setTransactionId(parsed.transactionId);
-            setMpesaText("Message detected automatically!");
-
-            // Optional: Auto-submit or show a "Confirm" button
-            alert(`New M-PESA Income detected from ${parsed.partner}: Ksh ${parsed.amount}. Please review and save.`);
-        }
-    });
-
     const fetchIncomes = async () => {
-        const { data } = await api.get('/income');
-        setIncomes(data);
-    };
-
-    const handleMpesaPaste = (e) => {
-        const text = e.target.value;
-        setMpesaText(text);
-        const parsed = parseMpesaMessage(text);
-        if (parsed) {
-            setAmount(parsed.amount);
-            setSource(parsed.partner);
-            setTitle(parsed.title);
-            setDate(parsed.date);
-            setTime(parsed.time);
-            setPaymentMethod('M-PESA');
-            setTransactionId(parsed.transactionId);
+        try {
+            setLoading(true);
+            const { data } = await api.get('/income');
+            // Sort latest recording activity first
+            const sorted = [...data].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+            setIncomes(sorted);
+        } catch (err) {
+            console.error('Failed to fetch incomes', err);
+        } finally {
+            setLoading(false);
         }
     };
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        try {
-            await api.post('/income', {
-                amount,
-                source,
-                date: time ? `${date}T${time}` : date,
-                description,
-                title,
-                paymentMethod,
-                transactionId
-            });
-            setAmount('');
-            setTitle('');
-            setSource('');
-            setDescription('');
-            setPaymentMethod('Cash');
-            setTransactionId('');
-            setTime('');
-            fetchIncomes();
-            alert('Income saved successfully!');
-        } catch (err) {
-            console.error(err);
-            if (err.response?.data?.message?.includes('duplicate key') || err.response?.data?.message?.includes('E11000') || err.response?.status === 400) {
-                alert('This transaction has already been recorded in your history.');
-            } else {
-                alert('Failed to add income');
+    const handleDelete = async (id) => {
+        if (window.confirm('Delete this income record?')) {
+            try {
+                await api.delete(`/income/${id}`);
+                fetchIncomes();
+            } catch (err) {
+                alert('Failed to delete income record.');
             }
         }
     };
 
+    const totalIncome = incomes.reduce((sum, i) => sum + i.amount, 0);
+
     return (
         <div>
-            <h2 style={{ marginBottom: '2rem' }}>Cash In Management</h2>
-            <div className="grid-responsive">
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                    <div className="card" style={{ border: '2px dashed #e2e8f0', background: '#f8fafc' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
-                            <Smartphone size={18} style={{ color: '#2563eb' }} />
-                            <h3 style={{ fontSize: '0.9rem', fontWeight: '800', textTransform: 'uppercase', color: '#0f172a' }}>M-PESA SMART PASTE</h3>
-                        </div>
-                        <p style={{ fontSize: '0.75rem', color: '#64748b', marginBottom: '0.75rem', fontWeight: '600' }}>Paste your M-PESA message here to auto-fill the form below.</p>
-                        <textarea
-                            value={mpesaText}
-                            onChange={handleMpesaPaste}
-                            placeholder="e.g. QX72... Confirmed. You have received Ksh 1,000.00 from..."
-                            style={{ height: '80px', fontSize: '0.8rem', border: '1px solid #cbd5e1' }}
-                        ></textarea>
-                    </div>
-
-                    {amount > 0 && (
-                        <div className="card" style={{ background: '#ecfdf5', border: '1px solid #10b981', marginBottom: '1rem' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                                <Target size={18} color="#059669" />
-                                <h4 style={{ fontSize: '0.8rem', fontWeight: '900', color: '#064e3b', textTransform: 'uppercase' }}>Savings Recommendation</h4>
-                            </div>
-                            <p style={{ fontSize: '0.85rem', color: '#065f46', fontWeight: '600', lineHeight: '1.4' }}>
-                                Based on the 20% rule, we recommend saving <span style={{ fontWeight: '900' }}>Ksh {(amount * 0.2).toLocaleString()}</span> for your future.
-                            </p>
-                            <div style={{ marginTop: '1rem', borderTop: '1px solid #a7f3d0', paddingTop: '0.75rem' }}>
-                                <p style={{ fontSize: '0.7rem', color: '#047857', fontWeight: '700', marginBottom: '0.5rem' }}>USE ZIDI TO SAVE SECURELY:</p>
-                                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                    <button
-                                        onClick={() => alert(`Instructions: \n1. Go to M-PESA \n2. Send Ksh ${(amount * 0.2).toLocaleString()} to Zidi \n3. Paste the confirmation message in 'Savings' page.`)}
-                                        style={{ flex: 1, padding: '0.5rem', fontSize: '0.7rem', fontWeight: '900', background: '#059669', color: '#fff', border: 'none' }}
-                                    >
-                                        SAVE NOW WITH ZIDI
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    <div className="card">
-                        <h3 style={{ marginBottom: '1.25rem', fontSize: '1rem', fontWeight: '800', color: '#0f172a' }}>ADD NEW INCOME</h3>
-                        <form onSubmit={handleSubmit}>
-                            <div className="input-group">
-                                <label>Amount (Ksh)</label>
-                                <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} required placeholder="0.00" />
-                            </div>
-                            <div className="input-group">
-                                <label>Title / Item Name</label>
-                                <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} required placeholder="e.g. Monthly Salary" />
-                            </div>
-                            <div className="input-group">
-                                <label>Source</label>
-                                <input type="text" value={source} onChange={(e) => setSource(e.target.value)} required placeholder="e.g. Salary, Freelance" />
-                            </div>
-                            <div className="input-group">
-                                <label>Date & Time</label>
-                                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                    <input type="date" value={date} onChange={(e) => setDate(e.target.value)} required style={{ flex: 2 }} />
-                                    <input type="text" placeholder="HH:mm" value={time} onChange={(e) => setTime(e.target.value)} style={{ flex: 1 }} />
-                                </div>
-                            </div>
-                            <div className="input-group">
-                                <label>Description (Optional)</label>
-                                <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Add some notes..."></textarea>
-                            </div>
-                            <button type="submit" className="btn btn-primary" style={{ width: '100%', background: '#0f172a', color: '#fff', padding: '0.9rem', marginTop: '0.5rem', fontWeight: '800' }}>
-                                <Plus size={18} /> SAVE INCOME
-                            </button>
-                        </form>
-                    </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem' }}>
+                <div>
+                    <h2 style={{ fontWeight: '900', fontSize: '1.75rem', letterSpacing: '-0.03em', color: '#0f172a', marginBottom: '0.25rem' }}>
+                        CASH IN RECORDS
+                    </h2>
+                    <p style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: '600' }}>
+                        All income entries — recorded manually or via M-PESA sync on the Dashboard.
+                    </p>
                 </div>
+                <div style={{ textAlign: 'right', padding: '1rem 1.5rem', background: '#f0fdf4', border: '1px solid #bbf7d0' }}>
+                    <div style={{ fontSize: '0.65rem', fontWeight: '800', color: '#16a34a', textTransform: 'uppercase', marginBottom: '0.25rem' }}>Total Recorded</div>
+                    <div style={{ fontSize: '1.5rem', fontWeight: '900', color: '#0f172a' }}>Ksh {totalIncome.toLocaleString()}</div>
+                    <div style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: '600' }}>{incomes.length} record{incomes.length !== 1 ? 's' : ''}</div>
+                </div>
+            </div>
 
-                <div className="card">
-                    <h3 style={{ marginBottom: '1.5rem', fontSize: '1.1rem', fontWeight: '800' }}>INCOME HISTORY</h3>
-                    <div style={{ maxHeight: '500px', overflowY: 'auto' }}>
-                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                            <thead>
-                                <tr style={{ borderBottom: '2px solid #f1f5f9', textAlign: 'left' }}>
-                                    <th style={{ padding: '0.75rem 0', fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase' }}>Date</th>
-                                    <th style={{ fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase' }}>Item Name</th>
-                                    <th style={{ fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase' }}>Source</th>
-                                    <th style={{ fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase' }}>Amount</th>
-                                    <th style={{ textAlign: 'right', fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase' }}>Actions</th>
+            <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+                {loading ? (
+                    <div style={{ textAlign: 'center', padding: '4rem', color: '#94a3b8' }}>
+                        <div style={{ fontSize: '0.85rem', fontWeight: '700' }}>Loading records...</div>
+                    </div>
+                ) : incomes.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '5rem 2rem', color: '#94a3b8' }}>
+                        <TrendingUp size={40} style={{ marginBottom: '1rem', opacity: 0.3 }} />
+                        <p style={{ fontWeight: '700', fontSize: '0.9rem' }}>No income records yet.</p>
+                        <p style={{ fontSize: '0.8rem', marginTop: '0.5rem' }}>
+                            Use <strong>Record Cash In</strong> on the Dashboard to add your first entry.
+                        </p>
+                    </div>
+                ) : (
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <thead>
+                            <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0' }}>
+                                <th style={{ padding: '0.9rem 1.25rem', fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase', textAlign: 'left', fontWeight: '800' }}>Date</th>
+                                <th style={{ padding: '0.9rem 0.5rem', fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase', textAlign: 'left', fontWeight: '800' }}>Source</th>
+                                <th style={{ padding: '0.9rem 0.5rem', fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase', textAlign: 'left', fontWeight: '800' }}>Method</th>
+                                <th style={{ padding: '0.9rem 0.5rem', fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase', textAlign: 'left', fontWeight: '800' }}>Description</th>
+                                <th style={{ padding: '0.9rem 1.25rem', fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase', textAlign: 'right', fontWeight: '800' }}>Amount</th>
+                                <th style={{ padding: '0.9rem 1rem', fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase', textAlign: 'right', fontWeight: '800' }}></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {incomes.map((item, idx) => (
+                                <tr
+                                    key={item._id}
+                                    style={{
+                                        borderBottom: '1px solid #f1f5f9',
+                                        background: idx === 0 ? '#fafffe' : '#fff',
+                                        transition: 'background 0.15s'
+                                    }}
+                                >
+                                    <td style={{ padding: '1rem 1.25rem', fontSize: '0.85rem', color: '#475569', fontWeight: '600', whiteSpace: 'nowrap' }}>
+                                        {new Date(item.date).toLocaleDateString('en-GB', { timeZone: 'Africa/Nairobi', day: '2-digit', month: 'short', year: 'numeric' })}
+                                        <div style={{ fontSize: '0.7rem', color: '#94a3b8', fontWeight: '500' }}>
+                                            {new Date(item.date).toLocaleTimeString('en-GB', { timeZone: 'Africa/Nairobi', hour: '2-digit', minute: '2-digit' })}
+                                        </div>
+                                    </td>
+                                    <td style={{ padding: '1rem 0.5rem', fontWeight: '800', fontSize: '0.9rem', color: '#0f172a' }}>
+                                        {item.source || item.title || '—'}
+                                    </td>
+                                    <td style={{ padding: '1rem 0.5rem' }}>
+                                        <span style={{
+                                            padding: '0.2rem 0.6rem',
+                                            fontSize: '0.7rem',
+                                            fontWeight: '800',
+                                            background: item.paymentMethod === 'M-PESA' ? '#eff6ff' : '#f8fafc',
+                                            color: item.paymentMethod === 'M-PESA' ? '#2563eb' : '#64748b',
+                                            border: `1px solid ${item.paymentMethod === 'M-PESA' ? '#bfdbfe' : '#e2e8f0'}`
+                                        }}>
+                                            {item.paymentMethod || 'Cash'}
+                                        </span>
+                                    </td>
+                                    <td style={{ padding: '1rem 0.5rem', fontSize: '0.82rem', color: '#64748b', maxWidth: '200px' }}>
+                                        {item.description || <span style={{ color: '#cbd5e1' }}>—</span>}
+                                    </td>
+                                    <td style={{ padding: '1rem 1.25rem', color: '#16a34a', fontWeight: '900', fontSize: '1rem', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                                        +Ksh {item.amount.toLocaleString()}
+                                    </td>
+                                    <td style={{ padding: '1rem 1rem', textAlign: 'right' }}>
+                                        <button
+                                            onClick={() => handleDelete(item._id)}
+                                            title="Delete"
+                                            style={{ background: 'transparent', color: '#cbd5e1', border: 'none', cursor: 'pointer', padding: '4px', transition: 'color 0.15s' }}
+                                            onMouseEnter={e => e.currentTarget.style.color = '#ef4444'}
+                                            onMouseLeave={e => e.currentTarget.style.color = '#cbd5e1'}
+                                        >
+                                            <Trash2 size={15} />
+                                        </button>
+                                    </td>
                                 </tr>
-                            </thead>
-                            <tbody>
-                                {incomes.map((item) => (
-                                    <tr key={item._id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                                        <td style={{ padding: '1rem 0', fontSize: '0.85rem' }}>
-                                            {new Date(item.date).toLocaleString('en-GB', { timeZone: 'Africa/Nairobi', dateStyle: 'short', timeStyle: 'short' })}
-                                        </td>
-                                        <td style={{ fontWeight: '700', fontSize: '0.85rem' }}>{item.title}</td>
-                                        <td style={{ fontSize: '0.85rem', color: '#64748b' }}>{item.source}</td>
-                                        <td style={{ color: '#16a34a', fontWeight: '800', fontSize: '0.85rem' }}>+Ksh {item.amount.toLocaleString()}</td>
-                                        <td style={{ textAlign: 'right' }}>
-                                            <button style={{ background: 'transparent', color: '#94a3b8', border: 'none', cursor: 'pointer' }}>
-                                                <Trash2 size={16} />
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+                            ))}
+                        </tbody>
+                    </table>
+                )}
             </div>
         </div>
     );

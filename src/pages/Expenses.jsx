@@ -1,181 +1,164 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
-import { Plus, Trash2, Smartphone } from 'lucide-react';
-import { parseMpesaMessage } from '../utils/mpesaParser';
-import { useMpesaListener } from '../hooks/useMpesaListener';
+import { Trash2, TrendingDown } from 'lucide-react';
+
+const CATEGORY_COLORS = {
+    'Housing & Utilities': { bg: '#fef9c3', color: '#854d0e' },
+    'Food & Household': { bg: '#dcfce7', color: '#166534' },
+    'Transportation': { bg: '#dbeafe', color: '#1e40af' },
+    'Health & Personal Care': { bg: '#fce7f3', color: '#9d174d' },
+    'Financial Obligations': { bg: '#fee2e2', color: '#991b1b' },
+    'Lifestyle & Entertainment': { bg: '#ede9fe', color: '#5b21b6' },
+    'Assets': { bg: '#d1fae5', color: '#065f46' },
+    'Miscellaneous': { bg: '#f1f5f9', color: '#475569' },
+};
 
 const Expenses = () => {
     const [expenses, setExpenses] = useState([]);
-    const [amount, setAmount] = useState('');
-    const [title, setTitle] = useState('');
-    const [category, setCategory] = useState('Food');
-    const [date, setDate] = useState(new Date().toLocaleDateString('en-CA', { timeZone: 'Africa/Nairobi' })); // en-CA gives YYYY-MM-DD
-    const [description, setDescription] = useState('');
-    const [mpesaText, setMpesaText] = useState('');
-    const [paymentMethod, setPaymentMethod] = useState('Cash');
-    const [transactionId, setTransactionId] = useState('');
-    const [time, setTime] = useState(new Date().toLocaleTimeString('en-GB', { timeZone: 'Africa/Nairobi', hour: '2-digit', minute: '2-digit' }));
-
-    const categories = ['Food', 'Transport', 'Rent', 'Utilities', 'Entertainment', 'Other'];
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         fetchExpenses();
     }, []);
 
-    // Listen for background M-PESA messages
-    useMpesaListener((parsed) => {
-        if (parsed && (parsed.type === 'expense' || parsed.type === 'savings')) {
-            setAmount(parsed.amount);
-            setTitle(parsed.title);
-            setDate(parsed.date);
-            setTime(parsed.time);
-            setPaymentMethod('M-PESA');
-            setTransactionId(parsed.transactionId);
-            setCategory('Other');
-            setMpesaText("Message detected automatically!");
-
-            alert(`New M-PESA ${parsed.type === 'savings' ? 'Savings' : 'Expense'} detected: ${parsed.title}. Ksh ${parsed.amount}. Please review and save.`);
-        }
-    });
-
     const fetchExpenses = async () => {
-        const { data } = await api.get('/expenses');
-        setExpenses(data);
-    };
-
-    const handleMpesaPaste = (e) => {
-        const text = e.target.value;
-        setMpesaText(text);
-        const parsed = parseMpesaMessage(text);
-        if (parsed) {
-            setAmount(parsed.amount);
-            setTitle(parsed.title);
-            setDate(parsed.date);
-            setTime(parsed.time);
-            setPaymentMethod('M-PESA');
-            setTransactionId(parsed.transactionId);
-            // Default category for M-PESA payments
-            setCategory('Other');
+        try {
+            setLoading(true);
+            const { data } = await api.get('/expenses');
+            const sorted = [...data].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+            setExpenses(sorted);
+        } catch (err) {
+            console.error('Failed to fetch expenses', err);
+        } finally {
+            setLoading(false);
         }
     };
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        try {
-            await api.post('/expenses', {
-                amount,
-                category,
-                date: time ? `${date}T${time}` : date,
-                description,
-                title,
-                paymentMethod,
-                transactionId
-            });
-            setAmount('');
-            setTitle('');
-            setDescription('');
-            setPaymentMethod('Cash');
-            setTransactionId('');
-            setTime('');
-            fetchExpenses();
-            alert('Expense saved successfully!');
-        } catch (err) {
-            console.error(err);
-            if (err.response?.data?.message?.includes('duplicate key') || err.response?.data?.message?.includes('E11000') || err.response?.status === 400) {
-                alert('This transaction has already been recorded in your history.');
-            } else {
-                alert('Failed to add expense');
+    const handleDelete = async (id) => {
+        if (window.confirm('Delete this expense record?')) {
+            try {
+                await api.delete(`/expenses/${id}`);
+                fetchExpenses();
+            } catch (err) {
+                alert('Failed to delete expense record.');
             }
         }
     };
 
+    const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
+
     return (
         <div>
-            <h2 style={{ marginBottom: '2rem' }}>Cash Out Management</h2>
-            <div className="grid-responsive">
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                    <div className="card" style={{ border: '2px dashed #fee2e2', background: '#fffafb' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
-                            <Smartphone size={18} style={{ color: '#dc2626' }} />
-                            <h3 style={{ fontSize: '0.9rem', fontWeight: '800', textTransform: 'uppercase', color: '#0f172a' }}>M-PESA SMART PASTE</h3>
-                        </div>
-                        <p style={{ fontSize: '0.75rem', color: '#64748b', marginBottom: '0.75rem', fontWeight: '600' }}>Paste your M-PESA message here to auto-fill the form below.</p>
-                        <textarea
-                            value={mpesaText}
-                            onChange={handleMpesaPaste}
-                            placeholder="e.g. QX72... Confirmed. Ksh 500.00 paid to..."
-                            style={{ height: '80px', fontSize: '0.8rem', border: '1px solid #fee2e2' }}
-                        ></textarea>
-                    </div>
-
-                    <div className="card">
-                        <h3 style={{ marginBottom: '1.25rem', fontSize: '1rem', fontWeight: '800', color: '#0f172a' }}>RECORD EXPENSE</h3>
-                        <form onSubmit={handleSubmit}>
-                            <div className="input-group">
-                                <label>Amount (Ksh)</label>
-                                <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} required placeholder="0.00" />
-                            </div>
-                            <div className="input-group">
-                                <label>Item Name</label>
-                                <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} required placeholder="e.g. Pizza, Movie Ticket" />
-                            </div>
-                            <div className="input-group">
-                                <label>Category</label>
-                                <select value={category} onChange={(e) => setCategory(e.target.value)} required>
-                                    {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
-                                </select>
-                            </div>
-                            <div className="input-group">
-                                <label>Date & Time</label>
-                                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                    <input type="date" value={date} onChange={(e) => setDate(e.target.value)} required style={{ flex: 2 }} />
-                                    <input type="text" placeholder="HH:mm" value={time} onChange={(e) => setTime(e.target.value)} style={{ flex: 1 }} />
-                                </div>
-                            </div>
-                            <div className="input-group">
-                                <label>Description (Optional)</label>
-                                <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Add some notes..."></textarea>
-                            </div>
-                            <button type="submit" className="btn btn-primary" style={{ width: '100%', background: '#dc2626', color: '#fff', padding: '0.9rem', marginTop: '0.5rem', fontWeight: '800' }}>
-                                <Plus size={18} /> SAVE EXPENSE
-                            </button>
-                        </form>
-                    </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem' }}>
+                <div>
+                    <h2 style={{ fontWeight: '900', fontSize: '1.75rem', letterSpacing: '-0.03em', color: '#0f172a', marginBottom: '0.25rem' }}>
+                        CASH OUT RECORDS
+                    </h2>
+                    <p style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: '600' }}>
+                        All expense entries — recorded manually or via M-PESA sync on the Dashboard.
+                    </p>
                 </div>
+                <div style={{ textAlign: 'right', padding: '1rem 1.5rem', background: '#fef2f2', border: '1px solid #fecaca' }}>
+                    <div style={{ fontSize: '0.65rem', fontWeight: '800', color: '#dc2626', textTransform: 'uppercase', marginBottom: '0.25rem' }}>Total Spent</div>
+                    <div style={{ fontSize: '1.5rem', fontWeight: '900', color: '#0f172a' }}>Ksh {totalExpenses.toLocaleString()}</div>
+                    <div style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: '600' }}>{expenses.length} record{expenses.length !== 1 ? 's' : ''}</div>
+                </div>
+            </div>
 
-                <div className="card">
-                    <h3 style={{ marginBottom: '1.5rem', fontSize: '1.1rem', fontWeight: '800' }}>EXPENSE HISTORY</h3>
-                    <div style={{ maxHeight: '500px', overflowY: 'auto' }}>
-                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                            <thead>
-                                <tr style={{ borderBottom: '2px solid #f1f5f9', textAlign: 'left' }}>
-                                    <th style={{ padding: '0.75rem 0', fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase' }}>Date</th>
-                                    <th style={{ fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase' }}>Item Name</th>
-                                    <th style={{ fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase' }}>Category</th>
-                                    <th style={{ fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase' }}>Amount</th>
-                                    <th style={{ textAlign: 'right', fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase' }}>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {expenses.map((item) => (
-                                    <tr key={item._id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                                        <td style={{ padding: '1rem 0', fontSize: '0.85rem' }}>
-                                            {new Date(item.date).toLocaleString('en-GB', { timeZone: 'Africa/Nairobi', dateStyle: 'short', timeStyle: 'short' })}
+            <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+                {loading ? (
+                    <div style={{ textAlign: 'center', padding: '4rem', color: '#94a3b8' }}>
+                        <div style={{ fontSize: '0.85rem', fontWeight: '700' }}>Loading records...</div>
+                    </div>
+                ) : expenses.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '5rem 2rem', color: '#94a3b8' }}>
+                        <TrendingDown size={40} style={{ marginBottom: '1rem', opacity: 0.3 }} />
+                        <p style={{ fontWeight: '700', fontSize: '0.9rem' }}>No expense records yet.</p>
+                        <p style={{ fontSize: '0.8rem', marginTop: '0.5rem' }}>
+                            Use <strong>Record Cash Out</strong> on the Dashboard to add your first entry.
+                        </p>
+                    </div>
+                ) : (
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <thead>
+                            <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0' }}>
+                                <th style={{ padding: '0.9rem 1.25rem', fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase', textAlign: 'left', fontWeight: '800' }}>Date</th>
+                                <th style={{ padding: '0.9rem 0.5rem', fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase', textAlign: 'left', fontWeight: '800' }}>Item</th>
+                                <th style={{ padding: '0.9rem 0.5rem', fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase', textAlign: 'left', fontWeight: '800' }}>Category</th>
+                                <th style={{ padding: '0.9rem 0.5rem', fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase', textAlign: 'left', fontWeight: '800' }}>Method</th>
+                                <th style={{ padding: '0.9rem 0.5rem', fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase', textAlign: 'left', fontWeight: '800' }}>Notes</th>
+                                <th style={{ padding: '0.9rem 1.25rem', fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase', textAlign: 'right', fontWeight: '800' }}>Amount</th>
+                                <th style={{ padding: '0.9rem 1rem', fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase', textAlign: 'right', fontWeight: '800' }}></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {expenses.map((item, idx) => {
+                                const catStyle = CATEGORY_COLORS[item.category] || CATEGORY_COLORS.Miscellaneous;
+                                return (
+                                    <tr
+                                        key={item._id}
+                                        style={{
+                                            borderBottom: '1px solid #f1f5f9',
+                                            background: idx === 0 ? '#fffafa' : '#fff',
+                                        }}
+                                    >
+                                        <td style={{ padding: '1rem 1.25rem', fontSize: '0.85rem', color: '#475569', fontWeight: '600', whiteSpace: 'nowrap' }}>
+                                            {new Date(item.date).toLocaleDateString('en-GB', { timeZone: 'Africa/Nairobi', day: '2-digit', month: 'short', year: 'numeric' })}
+                                            <div style={{ fontSize: '0.7rem', color: '#94a3b8', fontWeight: '500' }}>
+                                                {new Date(item.date).toLocaleTimeString('en-GB', { timeZone: 'Africa/Nairobi', hour: '2-digit', minute: '2-digit' })}
+                                            </div>
                                         </td>
-                                        <td style={{ fontWeight: '700', fontSize: '0.85rem' }}>{item.title}</td>
-                                        <td style={{ fontSize: '0.85rem' }}><span style={{ padding: '0.2rem 0.6rem', border: '1px solid #e2e8f0', background: '#f8fafc', fontWeight: '600', color: '#64748b', fontSize: '0.75rem' }}>{item.category.toUpperCase()}</span></td>
-                                        <td style={{ color: '#dc2626', fontWeight: '800', fontSize: '0.85rem' }}>-Ksh {item.amount.toLocaleString()}</td>
-                                        <td style={{ textAlign: 'right' }}>
-                                            <button style={{ background: 'transparent', color: '#94a3b8', border: 'none', cursor: 'pointer' }}>
-                                                <Trash2 size={16} />
+                                        <td style={{ padding: '1rem 0.5rem', fontWeight: '800', fontSize: '0.9rem', color: '#0f172a' }}>
+                                            {item.title || '—'}
+                                        </td>
+                                        <td style={{ padding: '1rem 0.5rem' }}>
+                                            <span style={{
+                                                padding: '0.2rem 0.6rem',
+                                                fontSize: '0.7rem',
+                                                fontWeight: '800',
+                                                background: catStyle.bg,
+                                                color: catStyle.color,
+                                                border: `1px solid ${catStyle.bg}`,
+                                                whiteSpace: 'nowrap'
+                                            }}>
+                                                {(item.category || 'Miscellaneous').toUpperCase()}
+                                            </span>
+                                        </td>
+                                        <td style={{ padding: '1rem 0.5rem' }}>
+                                            <span style={{
+                                                padding: '0.2rem 0.6rem',
+                                                fontSize: '0.7rem',
+                                                fontWeight: '800',
+                                                background: item.paymentMethod === 'M-PESA' ? '#eff6ff' : '#f8fafc',
+                                                color: item.paymentMethod === 'M-PESA' ? '#2563eb' : '#64748b',
+                                                border: `1px solid ${item.paymentMethod === 'M-PESA' ? '#bfdbfe' : '#e2e8f0'}`
+                                            }}>
+                                                {item.paymentMethod || 'Cash'}
+                                            </span>
+                                        </td>
+                                        <td style={{ padding: '1rem 0.5rem', fontSize: '0.82rem', color: '#64748b', maxWidth: '180px' }}>
+                                            {item.description || <span style={{ color: '#cbd5e1' }}>—</span>}
+                                        </td>
+                                        <td style={{ padding: '1rem 1.25rem', color: '#dc2626', fontWeight: '900', fontSize: '1rem', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                                            -Ksh {item.amount.toLocaleString()}
+                                        </td>
+                                        <td style={{ padding: '1rem 1rem', textAlign: 'right' }}>
+                                            <button
+                                                onClick={() => handleDelete(item._id)}
+                                                title="Delete"
+                                                style={{ background: 'transparent', color: '#cbd5e1', border: 'none', cursor: 'pointer', padding: '4px', transition: 'color 0.15s' }}
+                                                onMouseEnter={e => e.currentTarget.style.color = '#ef4444'}
+                                                onMouseLeave={e => e.currentTarget.style.color = '#cbd5e1'}
+                                            >
+                                                <Trash2 size={15} />
                                             </button>
                                         </td>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+                                );
+                            })}
+                        </tbody>
+                    </table>
+                )}
             </div>
         </div>
     );

@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, Eye, EyeOff } from 'lucide-react';
 
 const Login = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
     const { login } = useAuth();
     const navigate = useNavigate();
@@ -65,7 +66,35 @@ const Login = () => {
                     </div>
                     <div className="input-group">
                         <label style={{ color: '#475569', fontWeight: '600', fontSize: '0.75rem', textTransform: 'uppercase' }}>Password</label>
-                        <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required placeholder="••••••••" />
+                        <div style={{ position: 'relative' }}>
+                            <input 
+                                type={showPassword ? "text" : "password"} 
+                                value={password} 
+                                onChange={(e) => setPassword(e.target.value)} 
+                                required 
+                                placeholder="••••••••"
+                                style={{ paddingRight: '2.5rem' }}
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                style={{
+                                    position: 'absolute',
+                                    right: '8px',
+                                    top: '50%',
+                                    transform: 'translateY(-50%)',
+                                    background: 'none',
+                                    border: 'none',
+                                    color: '#94a3b8',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    padding: '2px',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                            </button>
+                        </div>
                     </div>
                     <button type="submit" className="btn btn-primary" style={{
                         width: '100%',
