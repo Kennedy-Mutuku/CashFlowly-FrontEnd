@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title } from 'chart.js';
 import { Pie, Bar } from 'react-chartjs-2';
-import { Share2, TrendingUp, TrendingDown, Wallet, ArrowUpRight, ArrowDownLeft, Download, Upload, CreditCard, LayoutDashboard, ChevronLeft, ChevronRight, Smartphone, Save, MinusCircle, X, Calendar, FileText, Loader, Lightbulb, Target } from 'lucide-react';
-import { generatePDF } from '../utils/pdfExport';
+import { Share2, TrendingUp, TrendingDown, Wallet, ArrowUpRight, ArrowDownLeft, Download, Upload, CreditCard, LayoutDashboard, ChevronLeft, ChevronRight, Smartphone, Save, PlusCircle, MinusCircle, X, Calendar, FileText, Loader, Lightbulb, Target } from 'lucide-react';
 import { parseMpesaMessage } from '../utils/mpesaParser';
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title);
@@ -40,7 +39,7 @@ const Dashboard = () => {
     const [coAmount, setCoAmount] = useState('');
     const [coTitle, setCoTitle] = useState('');
     const [coCategory, setCoCategory] = useState('');
-    const [coDate, setCoDate] = new Date().toLocaleDateString('en-CA', { timeZone: 'Africa/Nairobi' });
+    const [coDate, setCoDate] = useState(new Date().toLocaleDateString('en-CA', { timeZone: 'Africa/Nairobi' }));
     const [coDesc, setCoDesc] = useState('');
     const [coSaving, setCoSaving] = useState(false);
 
@@ -246,11 +245,20 @@ const Dashboard = () => {
         e.preventDefault();
         setCiSaving(true);
         try {
+            // If date is today, append current time for accuracy
+            let finalDate = ciDate;
+            const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Africa/Nairobi' });
+            if (ciDate === today) {
+                const now = new Date();
+                const timeString = now.toLocaleTimeString('en-GB', { hour12: false }); // HH:MM:SS
+                finalDate = `${ciDate}T${timeString}`;
+            }
+
             await api.post('/income', {
                 amount: ciAmount,
                 source: ciSource,
                 title: ciSource, // use source as title for simplicity
-                date: ciDate,
+                date: finalDate,
                 description: ciDesc,
                 paymentMethod: 'Cash',
             });
@@ -258,7 +266,7 @@ const Dashboard = () => {
             const savedSource = ciSource;
             setCiAmount('');
             setCiSource('');
-            setCiDate(new Date().toLocaleDateString('en-CA', { timeZone: 'Africa/Nairobi' }));
+            setCiDate(today);
             setCiDesc('');
             setShowCashInForm(false);
             fetchReport();
@@ -275,11 +283,20 @@ const Dashboard = () => {
         e.preventDefault();
         setCoSaving(true);
         try {
+            // If date is today, append current time for accuracy
+            let finalDate = coDate;
+            const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Africa/Nairobi' });
+            if (coDate === today) {
+                const now = new Date();
+                const timeString = now.toLocaleTimeString('en-GB', { hour12: false }); // HH:MM:SS
+                finalDate = `${coDate}T${timeString}`;
+            }
+
             await api.post('/expenses', {
                 amount: coAmount,
                 title: coTitle,
                 category: coCategory,
-                date: coDate,
+                date: finalDate,
                 description: coDesc,
                 paymentMethod: 'Cash',
             });
@@ -296,7 +313,6 @@ const Dashboard = () => {
         } catch (err) {
             console.error(err);
             alert('Failed to save expense. Please check your entries and try again.');
-        } finally {
             setCoSaving(false);
         }
     };
@@ -304,6 +320,13 @@ const Dashboard = () => {
     const handleExportPDF = async () => {
         setExportingPdf(true);
         try {
+            console.log('Starting PDF export...');
+            // Dynamically import the PDF generator to avoid load-time issues with jspdf
+            const module = await import('../utils/pdfExport');
+            const generatePDF = module.generatePDF;
+
+            if (!generatePDF) throw new Error('PDF generator module not found');
+
             const [incomeRes, expenseRes] = await Promise.all([
                 api.get('/income'),
                 api.get('/expenses')
@@ -332,10 +355,11 @@ const Dashboard = () => {
             const chartContainer = document.getElementById('dashboard-charts-container');
 
             await generatePDF(report, allTransactions, chartContainer, month);
+            console.log('PDF export completed');
 
         } catch (error) {
-            console.error("Export failed", error);
-            alert("Failed to generate PDF");
+            console.error("Export failed:", error);
+            alert("Export Failed: " + (error.message || error.toString()));
         } finally {
             setExportingPdf(false);
         }

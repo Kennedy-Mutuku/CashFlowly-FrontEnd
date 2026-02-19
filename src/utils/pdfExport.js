@@ -1,5 +1,5 @@
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 import html2canvas from 'html2canvas';
 
 /**
@@ -11,7 +11,10 @@ import html2canvas from 'html2canvas';
  */
 export const generatePDF = async (reportData, transactions, chartContainer, month) => {
     try {
-        const doc = new jsPDF();
+        console.log("Initializing jsPDF...");
+        const doc = new (jsPDF.jsPDF || jsPDF)();
+        console.log("jsPDF initialized.");
+
         const pageWidth = doc.internal.pageSize.getWidth();
         const pageHeight = doc.internal.pageSize.getHeight();
         const margin = 14;
@@ -37,6 +40,7 @@ export const generatePDF = async (reportData, transactions, chartContainer, mont
         let yPos = 55;
 
         // --- Financial Summary Table ---
+        console.log("Generating Summary Table...");
         doc.setTextColor(15, 23, 42);
         doc.setFontSize(14);
         doc.setFont('helvetica', 'bold');
@@ -44,13 +48,13 @@ export const generatePDF = async (reportData, transactions, chartContainer, mont
         yPos += 8;
 
         const summaryData = [
-            ['Total Inflow', `Ksh ${reportData.totalIncome.toLocaleString()}`],
-            ['Total Outflow', `Ksh ${reportData.totalExpenses.toLocaleString()}`],
-            ['Net Cash Flow', `Ksh ${reportData.netBalance.toLocaleString()}`],
-            ['Total Savings (Ziidi)', `Ksh ${reportData.totalSavings?.toLocaleString() || '0'}`]
+            ['Total Inflow', `Ksh ${(reportData.totalIncome || 0).toLocaleString()}`],
+            ['Total Outflow', `Ksh ${(reportData.totalExpenses || 0).toLocaleString()}`],
+            ['Net Cash Flow', `Ksh ${(reportData.netBalance || 0).toLocaleString()}`],
+            ['Total Savings (Ziidi)', `Ksh ${(reportData.totalSavings || 0).toLocaleString()}`]
         ];
 
-        doc.autoTable({
+        autoTable(doc, {
             startY: yPos,
             head: [['Metric', 'Amount']],
             body: summaryData,
@@ -66,37 +70,46 @@ export const generatePDF = async (reportData, transactions, chartContainer, mont
         yPos = doc.lastAutoTable.finalY + 15;
 
         // --- Visual Analysis (Charts) ---
+        // console.log("Chart Container:", chartContainer);
         if (chartContainer) {
-            // Check if we need a new page
-            if (yPos + 100 > pageHeight) {
-                doc.addPage();
-                yPos = 20;
+            console.log("Capturing charts...");
+            try {
+                // Check if we need a new page
+                if (yPos + 100 > pageHeight) {
+                    doc.addPage();
+                    yPos = 20;
+                }
+
+                doc.setFontSize(14);
+                doc.setTextColor(15, 23, 42);
+                doc.text("Visual Analysis", margin, yPos);
+                yPos += 10;
+
+                const canvas = await html2canvas(chartContainer, {
+                    scale: 2,
+                    useCORS: true,
+                    logging: true, // Enable html2canvas logs
+                    backgroundColor: '#ffffff'
+                });
+                console.log("Charts captured.");
+
+                const imgData = canvas.toDataURL('image/png');
+                const imgWidth = pageWidth - (margin * 2);
+                const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+                doc.addImage(imgData, 'PNG', margin, yPos, imgWidth, imgHeight);
+                yPos += imgHeight + 15;
+            } catch (canvasErr) {
+                console.error("Chart capture failed:", canvasErr);
+                // Continue without charts
             }
-
-            doc.setFontSize(14);
-            doc.setTextColor(15, 23, 42);
-            doc.text("Visual Analysis", margin, yPos);
-            yPos += 10;
-
-            // Capture the chart container
-            // We use html2canvas with a higher scale for better resolution
-            const canvas = await html2canvas(chartContainer, {
-                scale: 2,
-                useCORS: true,
-                logging: false,
-                backgroundColor: '#ffffff'
-            });
-
-            const imgData = canvas.toDataURL('image/png');
-            const imgWidth = pageWidth - (margin * 2);
-            const imgHeight = (canvas.height * imgWidth) / canvas.width;
-
-            doc.addImage(imgData, 'PNG', margin, yPos, imgWidth, imgHeight);
-            yPos += imgHeight + 15;
+        } else {
+            console.warn("Chart container not found, skipping charts.");
         }
 
         // --- Detailed Statement (Transactions) ---
         if (transactions && transactions.length > 0) {
+            console.log("Generating Transaction Table...");
             // Check if we need a new page
             if (yPos + 30 > pageHeight) {
                 doc.addPage();
@@ -111,15 +124,34 @@ export const generatePDF = async (reportData, transactions, chartContainer, mont
             doc.text("Detailed Statement", margin, yPos);
             yPos += 8;
 
-            const tableBody = transactions.map(t => [
-                new Date(t.date).toLocaleDateString('en-GB'),
-                t.title || t.description || t.category || '-',
-                t.type === 'income' ? 'Income' : (t.type === 'expense' ? 'Expense' : t.type.toUpperCase()),
-                t.category || '-',
-                `Ksh ${t.amount.toLocaleString()}`
-            ]);
+            const tableBody = transactions.map(t => {
+                const dateObj = new Date(t.date);
+                // Check if it's exactly midnight UTC (implies date-only record)
+                const isMidnight = dateObj.getUTCHours() === 0 &&
+                    dateObj.getUTCMinutes() === 0 &&
+                    dateObj.getUTCSeconds() === 0 &&
+                    dateObj.getUTCMilliseconds() === 0;
 
-            doc.autoTable({
+                const dateStr = isMidnight
+                    ? dateObj.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })
+                    : dateObj.toLocaleString('en-GB', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+
+                return [
+                    dateStr,
+                    t.title || t.description || t.category || '-',
+                    t.type === 'income' ? 'Income' : (t.type === 'expense' ? 'Expense' : t.type.toUpperCase()),
+                    t.category || '-',
+                    `Ksh ${t.amount.toLocaleString()}`
+                ];
+            });
+
+            autoTable(doc, {
                 startY: yPos,
                 head: [['Date', 'Description', 'Type', 'Category', 'Amount']],
                 body: tableBody,
@@ -152,9 +184,12 @@ export const generatePDF = async (reportData, transactions, chartContainer, mont
             doc.text("This is a system generated report from CashFlowly.", margin, finalY + 5);
         }
 
+        console.log("Saving PDF...");
         doc.save(`CashFlowly_Report_${month}.pdf`);
+        console.log("PDF Saved.");
         return true;
     } catch (error) {
+        console.error("PDF Generation Error Stack:", error.stack);
         console.error("PDF Generation Error:", error);
         return false;
     }
