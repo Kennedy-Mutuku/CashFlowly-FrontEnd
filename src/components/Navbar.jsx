@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { LayoutDashboard, Receipt, TrendingUp, TrendingDown, Target, LogOut, Wallet, Menu, X, Users, User, Bot } from 'lucide-react';
 import ProfileDrawer from './ProfileDrawer';
+import logo from '../assets/logo.png'; // Import the new logo
 
 const Navbar = () => {
     const { user, logout } = useAuth();
@@ -30,7 +31,7 @@ const Navbar = () => {
     return (
         <nav style={{
             marginBottom: '2rem',
-            padding: '1.25rem 0',
+            padding: '1rem 0', // Reduced padding to retain original navbar height
             position: 'sticky',
             top: 0,
             zIndex: 1000,
@@ -39,14 +40,24 @@ const Navbar = () => {
             boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
         }}>
             <div className="container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Link to="/" style={{ display: 'flex', flexDirection: 'column', textDecoration: 'none' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontWeight: '800', fontSize: '1.4rem', color: '#0f172a', letterSpacing: '-0.025em' }}>
-                        <Wallet color="#2563eb" size={24} strokeWidth={2.5} />
-                        CASHFLOWLY
+                <Link to="/" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none', gap: '0.8rem' }}>
+                    <img
+                        src={logo}
+                        alt="CashFlowly Logo"
+                        style={{
+                            height: '64px',
+                            width: 'auto',
+                            mixBlendMode: 'multiply'
+                        }}
+                    />
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                        <div style={{ fontWeight: '800', fontSize: '1.5rem', color: '#0f172a', letterSpacing: '-0.025em', lineHeight: '1' }}>
+                            CASHFLOWLY
+                        </div>
+                        <span style={{ fontSize: '0.6rem', fontWeight: '900', color: '#64748b', letterSpacing: '0.15em' }}>
+                            THE 50, 30, 20 RULE
+                        </span>
                     </div>
-                    <span style={{ fontSize: '0.55rem', fontWeight: '900', color: '#64748b', letterSpacing: '0.15em', marginTop: '-0.2rem', marginLeft: '2.4rem' }}>
-                        THE 50, 30, 20 RULE
-                    </span>
                 </Link>
 
                 {/* Desktop Nav */}

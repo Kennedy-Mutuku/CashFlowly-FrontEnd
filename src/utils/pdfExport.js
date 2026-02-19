@@ -1,6 +1,24 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import html2canvas from 'html2canvas';
+import logo from '../assets/logo.png';
+
+// Helper to convert image URL to Data URL (Base64)
+const getImageDataUrl = async (url) => {
+    try {
+        const response = await fetch(url);
+        const blob = await response.blob();
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+        });
+    } catch (error) {
+        console.error("Failed to load logo for PDF:", error);
+        return null;
+    }
+};
 
 /**
  * Generates a professional financial report PDF.
@@ -20,22 +38,35 @@ export const generatePDF = async (reportData, transactions, chartContainer, mont
         const margin = 14;
 
         // --- Header ---
-        doc.setFillColor(15, 23, 42); // slate-900
+        // Use White background to blend with logo if it has a white bg
+        doc.setFillColor(255, 255, 255);
         doc.rect(0, 0, pageWidth, 40, 'F');
 
-        doc.setTextColor(255, 255, 255);
+        // Add Logo - Expanded size for visibility
+        const logoDataUrl = await getImageDataUrl(logo);
+        if (logoDataUrl) {
+            doc.addImage(logoDataUrl, 'PNG', margin, 10, 30, 30); // Larger logo in PDF
+        }
+
+        // Title Text - Dark Slate
+        doc.setTextColor(15, 23, 42);
         doc.setFontSize(22);
         doc.setFont('helvetica', 'bold');
-        doc.text("CashFlowly", margin, 20);
+
+        // Align text next to the larger logo
+        const textX = logoDataUrl ? margin + 35 : margin;
+        doc.text("CashFlowly", textX, 22);
 
         doc.setFontSize(12);
         doc.setFont('helvetica', 'normal');
-        doc.text("Financial Statement & Analysis", margin, 28);
+        doc.setTextColor(100, 116, 139); // Slate 500 for subtitle
+        doc.text("Financial Statement & Analysis", textX, 30);
 
         const dateStr = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
         doc.setFontSize(10);
-        doc.text(`Generated: ${dateStr}`, pageWidth - margin, 20, { align: 'right' });
-        doc.text(`Period: ${month}`, pageWidth - margin, 28, { align: 'right' });
+        doc.setTextColor(15, 23, 42);
+        doc.text(`Generated: ${dateStr}`, pageWidth - margin, 22, { align: 'right' });
+        doc.text(`Period: ${month}`, pageWidth - margin, 30, { align: 'right' });
 
         let yPos = 55;
 
