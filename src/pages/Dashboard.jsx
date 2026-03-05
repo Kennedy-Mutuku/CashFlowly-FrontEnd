@@ -35,7 +35,7 @@ const Dashboard = () => {
     const [showCashInForm, setShowCashInForm] = useState(false);
     const [ciAmount, setCiAmount] = useState('');
     const [ciSource, setCiSource] = useState('');
-    const [ciDate, setCiDate] = new Date().toLocaleDateString('en-CA', { timeZone: 'Africa/Nairobi' });
+    const [ciDate, setCiDate] = useState(new Date().toLocaleDateString('en-CA', { timeZone: 'Africa/Nairobi' }));
     const [ciDesc, setCiDesc] = useState('');
     const [ciSaving, setCiSaving] = useState(false);
 
@@ -44,7 +44,7 @@ const Dashboard = () => {
     const [coAmount, setCoAmount] = useState('');
     const [coTitle, setCoTitle] = useState('');
     const [coCategory, setCoCategory] = useState('');
-    const [coDate, setCoDate] = new Date().toLocaleDateString('en-CA', { timeZone: 'Africa/Nairobi' });
+    const [coDate, setCoDate] = useState(new Date().toLocaleDateString('en-CA', { timeZone: 'Africa/Nairobi' }));
     const [coDesc, setCoDesc] = useState('');
     const [coSaving, setCoSaving] = useState(false);
 
@@ -127,9 +127,29 @@ const Dashboard = () => {
     const fetchAlerts = async () => {
         try {
             const { data } = await api.get('/notifications');
-            setActiveAlerts(data.filter(n => !n.isRead).slice(0, 3));
+            // Show only important alerts on dashboard to avoid clatter
+            const unread = data.filter(n => !n.isRead);
+            const important = unread.filter(n => {
+                const isCriticalBudget = n.type === 'budget' && (n.message.includes('100%') || n.message.includes('90%') || n.message.includes('exceeded'));
+                const isUrgentDebt = n.type === 'debt' && (n.title.toLowerCase().includes('deadline') || n.message.toLowerCase().includes('due in 1 days') || n.message.toLowerCase().includes('due in 0 days'));
+                return isCriticalBudget || isUrgentDebt;
+            });
+            setActiveAlerts(important.slice(0, 3));
         } catch (err) {
             console.error('Failed to fetch alerts');
+        }
+    };
+
+    const handleMarkAllAsRead = async () => {
+        try {
+            // Optimistic update
+            setActiveAlerts([]);
+            await api.put('/notifications/mark-all-read');
+            fetchReport();
+            window.dispatchEvent(new Event('notifications-updated'));
+        } catch (err) {
+            console.error('Failed to mark all as read');
+            fetchAlerts();
         }
     };
 
@@ -688,10 +708,18 @@ const Dashboard = () => {
                         }
                     `}</style>
                     <div style={{ padding: '0.75rem 1.25rem', background: '#fef2f2', borderBottom: '1px solid #fee2e2', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <h3 style={{ margin: 0, fontSize: '0.75rem', fontWeight: '900', color: '#991b1b', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <AlertCircle size={16} /> ACTION REQUIRED: {activeAlerts.length} URGENT ALERTS
-                        </h3>
-                        <Link to="/notifications" style={{ fontSize: '0.65rem', fontWeight: '800', color: '#ef4444', textDecoration: 'none' }}>VIEW ALL</Link>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                            <h3 style={{ margin: 0, fontSize: '0.75rem', fontWeight: '900', color: '#991b1b', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <AlertCircle size={16} /> ACTION REQUIRED: {activeAlerts.length} IMPORTANT ALERTS
+                            </h3>
+                            <button
+                                onClick={handleMarkAllAsRead}
+                                style={{ background: '#991b1b', color: 'white', border: 'none', borderRadius: '4px', padding: '2px 8px', fontSize: '0.6rem', fontWeight: '800', cursor: 'pointer', textTransform: 'uppercase' }}
+                            >
+                                Mark All as Read
+                            </button>
+                        </div>
+                        <Link to="/notifications" style={{ fontSize: '0.65rem', fontWeight: '800', color: '#ef4444', textDecoration: 'none' }}>VIEW HUB</Link>
                     </div>
                     {activeAlerts.map((alert, idx) => (
                         <div key={alert._id} style={{
@@ -993,47 +1021,6 @@ const Dashboard = () => {
             {/* Mid Section: AI Insights & Budget Tracking */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '2rem' }}>
 
-                {/* Insights Carousel */}
-                <div className="card" style={{ background: '#f8fafc', position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                        <h3 style={{ fontSize: '0.9rem', fontWeight: '900', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <LayoutDashboard size={18} color="#0f172a" /> SMART FINANCIAL INSIGHTS
-                        </h3>
-                        <div style={{ display: 'flex', gap: '0.5rem' }}>
-                            <button onClick={() => setActiveSlide(prev => (prev === 0 ? recommendations.length - 1 : prev - 1))} style={{ padding: '0.4rem', background: '#fff', border: '1px solid #e2e8f0', color: '#0f172a' }}>
-                                <ChevronLeft size={16} />
-                            </button>
-                            <button onClick={() => setActiveSlide(prev => (prev === recommendations.length - 1 ? 0 : prev + 1))} style={{ padding: '0.4rem', background: '#fff', border: '1px solid #e2e8f0', color: '#0f172a' }}>
-                                <ChevronRight size={16} />
-                            </button>
-                        </div>
-                    </div>
-
-                    <div style={{ transition: 'all 0.5s ease', flex: 1 }}>
-                        {loadingAdvice ? (
-                            <div style={{ padding: '1.5rem', textAlign: 'center', width: '100%', color: '#64748b', fontSize: '0.85rem', fontWeight: '700' }}>
-                                GENERIC AI ANALYSIS IN PROGRESS...
-                            </div>
-                        ) : (
-                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1.5rem' }}>
-                                <div style={{ padding: '1rem', background: '#fff', border: '1px solid #e2e8f0' }}>
-                                    {recommendations[activeSlide]?.icon}
-                                </div>
-                                <div>
-                                    <h4 style={{ fontWeight: '900', fontSize: '1rem', color: '#0f172a', marginBottom: '0.5rem' }}>{recommendations[activeSlide]?.title}</h4>
-                                    <p style={{ fontSize: '0.9rem', color: '#64748b', fontWeight: '500', lineHeight: '1.6' }}>{recommendations[activeSlide]?.desc}</p>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-
-                    <div style={{ display: 'flex', justifyContent: 'center', gap: '0.4rem', marginTop: '1.5rem' }}>
-                        {recommendations.map((_, i) => (
-                            <div key={i} style={{ width: '8px', height: '8px', borderRadius: '50%', background: activeSlide === i ? '#0f172a' : '#cbd5e1', transition: 'all 0.3s' }} />
-                        ))}
-                    </div>
-                </div>
-
                 {/* Active Category Budgets Tracker */}
                 <div className="card" style={{ display: 'flex', flexDirection: 'column' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
@@ -1092,6 +1079,45 @@ const Dashboard = () => {
                             })}
                         </div>
                     )}
+                </div>
+
+                {/* Smart Financial Statistics Hub */}
+                <div className="card" style={{ background: '#f8fafc', position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                        <h3 style={{ fontSize: '0.9rem', fontWeight: '900', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <LayoutDashboard size={18} color="#0f172a" /> SMART FINANCIAL STATISTICS
+                        </h3>
+                        <div style={{ fontSize: '0.65rem', fontWeight: '800', color: '#64748b', background: '#fff', padding: '2px 8px', borderRadius: '4px', border: '1px solid #e2e8f0' }}>ALL-TIME DATA</div>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', flex: 1 }}>
+                        <div style={{ background: '#fff', padding: '1rem', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                            <span style={{ fontSize: '0.6rem', fontWeight: '800', color: '#64748b', textTransform: 'uppercase' }}>Total Received</span>
+                            <span style={{ fontSize: '1.1rem', fontWeight: '900', color: '#16a34a' }}>Ksh {report.allTimeTotalIncome?.toLocaleString() || 0}</span>
+                        </div>
+                        <div style={{ background: '#fff', padding: '1rem', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                            <span style={{ fontSize: '0.6rem', fontWeight: '800', color: '#64748b', textTransform: 'uppercase' }}>Total Spent</span>
+                            <span style={{ fontSize: '1.1rem', fontWeight: '900', color: '#dc2626' }}>Ksh {report.allTimeTotalExpenses?.toLocaleString() || 0}</span>
+                        </div>
+                        <div style={{ background: '#fff', padding: '1rem', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                            <span style={{ fontSize: '0.6rem', fontWeight: '800', color: '#64748b', textTransform: 'uppercase' }}>Debts to Pay</span>
+                            <span style={{ fontSize: '1.1rem', fontWeight: '900', color: '#ef4444' }}>Ksh {report.allTimeDebts?.toPay?.toLocaleString() || 0}</span>
+                        </div>
+                        <div style={{ background: '#fff', padding: '1rem', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                            <span style={{ fontSize: '0.6rem', fontWeight: '800', color: '#64748b', textTransform: 'uppercase' }}>To be Paid</span>
+                            <span style={{ fontSize: '1.1rem', fontWeight: '900', color: '#2563eb' }}>Ksh {report.allTimeDebts?.toReceive?.toLocaleString() || 0}</span>
+                        </div>
+                        <div style={{ background: '#0f172a', padding: '1rem', gridColumn: 'span 2', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div>
+                                <span style={{ fontSize: '0.6rem', fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase' }}>Available Savings</span>
+                                <div style={{ fontSize: '1.25rem', fontWeight: '900', color: '#fff' }}>Ksh {report.totalSavings?.toLocaleString() || 0}</div>
+                            </div>
+                            <div style={{ textAlign: 'right' }}>
+                                <span style={{ fontSize: '0.6rem', fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase' }}>Active Budget Cap</span>
+                                <div style={{ fontSize: '1rem', fontWeight: '700', color: '#38bdf8' }}>Ksh {report.activeBudgets?.reduce((acc, b) => acc + b.amount, 0).toLocaleString() || 0}</div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 

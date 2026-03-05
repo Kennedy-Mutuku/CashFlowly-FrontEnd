@@ -12,6 +12,29 @@ const Navbar = () => {
     const location = useLocation();
     const [isOpen, setIsOpen] = useState(false);
     const [isProfileOpen, setIsProfileOpen] = useState(false);
+    const [unreadCount, setUnreadCount] = useState(0);
+
+    const fetchUnreadCount = async () => {
+        try {
+            const { data } = await api.get('/notifications');
+            setUnreadCount(data.filter(n => !n.isRead).length);
+        } catch (err) {
+            console.error('Failed to fetch unread count');
+        }
+    };
+
+    React.useEffect(() => {
+        if (user) {
+            fetchUnreadCount();
+            const interval = setInterval(fetchUnreadCount, 30000); // Poll every 30s
+            const handleUpdate = () => fetchUnreadCount();
+            window.addEventListener('notifications-updated', handleUpdate);
+            return () => {
+                clearInterval(interval);
+                window.removeEventListener('notifications-updated', handleUpdate);
+            };
+        }
+    }, [user]);
 
     const handleLogout = () => {
         logout();
@@ -41,29 +64,29 @@ const Navbar = () => {
             borderBottom: '1px solid #e2e8f0',
             boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
         }}>
-            <div className="container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Link to="/" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none', gap: '0.8rem' }}>
+            <div className="container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', maxWidth: '1440px' }}>
+                <Link to="/" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none', gap: '0.6rem', flexShrink: 0 }}>
                     <img
                         src={logo}
                         alt="CashFlowly Logo"
                         style={{
-                            height: '64px',
+                            height: '52px', // Slightly reduced to save horizontal space
                             width: 'auto',
                             mixBlendMode: 'multiply'
                         }}
                     />
                     <div style={{ display: 'flex', flexDirection: 'column' }}>
-                        <div style={{ fontWeight: '800', fontSize: '1.5rem', color: '#0f172a', letterSpacing: '-0.025em', lineHeight: '1' }}>
+                        <div style={{ fontWeight: '800', fontSize: '1.3rem', color: '#0f172a', letterSpacing: '-0.025em', lineHeight: '1' }}>
                             CASHFLOWLY
                         </div>
-                        <span style={{ fontSize: '0.6rem', fontWeight: '900', color: '#64748b', letterSpacing: '0.15em' }}>
+                        <span style={{ fontSize: '0.55rem', fontWeight: '900', color: '#64748b', letterSpacing: '0.15em' }}>
                             THE 50, 30, 20 RULE
                         </span>
                     </div>
                 </Link>
 
                 {/* Desktop Nav */}
-                <div className="nav-links" style={{ display: 'flex', gap: '1.25rem', alignItems: 'center' }}>
+                <div className="nav-links" style={{ display: 'flex', gap: '0.85rem', alignItems: 'center', flexWrap: 'nowrap' }}>
                     {navItems.map((item) => {
                         const isActive = location.pathname === item.path;
                         const activeColor = item.label === 'Cash Out' ? '#ef4444' : '#2563eb';
@@ -78,15 +101,35 @@ const Navbar = () => {
                                 textTransform: 'uppercase',
                                 padding: '0.4rem 0',
                                 borderBottom: isActive ? `2px solid ${activeColor}` : '2px solid transparent',
-                                transition: 'color 0.2s ease'
+                                transition: 'color 0.2s ease',
+                                position: 'relative',
+                                whiteSpace: 'nowrap'
                             }}>
-                                {React.cloneElement(item.icon, { size: 14, color: isActive ? activeColor : 'currentColor' })} {item.label}
+                                {React.cloneElement(item.icon, { size: 14, color: isActive ? activeColor : 'currentColor' })}
+                                {item.label}
+                                {item.label === 'Notifications' && unreadCount > 0 && (
+                                    <span style={{
+                                        marginLeft: '0.4rem',
+                                        background: '#ef4444',
+                                        color: '#fff',
+                                        fontSize: '0.55rem',
+                                        fontWeight: '900',
+                                        padding: '1px 6px',
+                                        borderRadius: '10px',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        boxShadow: '0 2px 4px rgba(239, 68, 68, 0.2)',
+                                        verticalAlign: 'middle'
+                                    }}>
+                                        {unreadCount}
+                                    </span>
+                                )}
                             </Link>
                         );
                     })}
                     <span style={{ color: '#e2e8f0' }}>|</span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                        <NotificationCenter />
                         <div
                             onClick={() => setIsProfileOpen(true)}
                             style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: '750', fontSize: '0.72rem', color: '#0f172a', textDecoration: 'none', cursor: 'pointer' }}
@@ -109,7 +152,12 @@ const Navbar = () => {
                 </div>
 
                 <div style={{ display: 'none' }} className="mobile-only-flex">
-                    <NotificationCenter />
+                    {/* Unread Indicator for Mobile Header */}
+                    {unreadCount > 0 && (
+                        <div style={{ background: '#ef4444', color: '#fff', fontSize: '0.6rem', fontWeight: '900', padding: '2px 6px', borderRadius: '10px' }}>
+                            {unreadCount} ALERTS
+                        </div>
+                    )}
                 </div>
                 {/* Mobile Toggle */}
                 <button

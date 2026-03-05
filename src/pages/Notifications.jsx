@@ -37,6 +37,17 @@ const Notifications = () => {
         }
     };
 
+    const markAllAsRead = async () => {
+        try {
+            setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+            await api.put('/notifications/mark-all-read');
+            window.dispatchEvent(new Event('notifications-updated'));
+        } catch (err) {
+            console.error('Failed to mark all as read');
+            fetchNotifications();
+        }
+    };
+
     const deleteNotification = async (id) => {
         try {
             setNotifications(prev => prev.filter(n => n._id !== id));
@@ -74,8 +85,26 @@ const Notifications = () => {
                 @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
             `}</style>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-                <h2 style={{ fontWeight: '900', fontSize: '1.75rem', letterSpacing: '-0.03em', color: '#0f172a', margin: 0 }}>Notification Hub</h2>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
+                <div>
+                    <h2 style={{ fontWeight: '900', fontSize: '1.75rem', letterSpacing: '-0.03em', color: '#0f172a', margin: 0 }}>Notification Hub</h2>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '0.25rem' }}>
+                        <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '700' }}>
+                            {notifications.filter(n => !n.isRead).length} UNREAD ALERTS
+                        </span>
+                        {notifications.filter(n => !n.isRead).length > 0 && (
+                            <>
+                                <span style={{ color: '#e2e8f0' }}>•</span>
+                                <button
+                                    onClick={markAllAsRead}
+                                    style={{ background: 'none', border: 'none', color: '#2563eb', fontSize: '0.75rem', fontWeight: '800', cursor: 'pointer', padding: 0 }}
+                                >
+                                    MARK ALL AS READ
+                                </button>
+                            </>
+                        )}
+                    </div>
+                </div>
                 <div style={{ display: 'flex', gap: '0.5rem', background: '#f1f5f9', padding: '0.25rem', borderRadius: '8px' }}>
                     {['all', 'unread', 'read'].map(f => (
                         <button
