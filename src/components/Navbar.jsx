@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LayoutDashboard, Receipt, TrendingUp, TrendingDown, Target, LogOut, Wallet, Menu, X, Users, User, Bot } from 'lucide-react';
+import { LayoutDashboard, Receipt, TrendingUp, TrendingDown, Target, LogOut, Wallet, Menu, X, Users, User, Bot, Bell } from 'lucide-react';
 import ProfileDrawer from './ProfileDrawer';
+import NotificationCenter from './NotificationCenter';
 import logo from '../assets/logo.png'; // Import the new logo
 
 const Navbar = () => {
@@ -25,6 +26,7 @@ const Navbar = () => {
         { label: 'Budget', path: '/budget', icon: <Wallet size={18} /> },
         { label: 'Savings', path: '/savings', icon: <Target size={18} /> },
         { label: 'Debts', path: '/debts', icon: <Users size={18} /> },
+        { label: 'Notifications', path: '/notifications', icon: <Bell size={18} /> },
         { label: 'AI Advisor', path: '/ai-advisor', icon: <Bot size={18} /> },
     ];
 
@@ -84,6 +86,7 @@ const Navbar = () => {
                     })}
                     <span style={{ color: '#e2e8f0' }}>|</span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                        <NotificationCenter />
                         <div
                             onClick={() => setIsProfileOpen(true)}
                             style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: '750', fontSize: '0.72rem', color: '#0f172a', textDecoration: 'none', cursor: 'pointer' }}
@@ -105,11 +108,14 @@ const Navbar = () => {
                     </div>
                 </div>
 
+                <div style={{ display: 'none' }} className="mobile-only-flex">
+                    <NotificationCenter />
+                </div>
                 {/* Mobile Toggle */}
                 <button
                     className="mobile-toggle"
                     onClick={() => setIsOpen(!isOpen)}
-                    style={{ display: 'none', background: 'transparent', border: 'none', color: '#0f172a', cursor: 'pointer' }}
+                    style={{ background: 'transparent', border: 'none', color: '#0f172a', cursor: 'pointer' }}
                 >
                     {isOpen ? <X size={24} /> : <Menu size={24} />}
                 </button>
@@ -190,6 +196,7 @@ const Navbar = () => {
                 @media (max-width: 768px) {
                     .nav-links { display: none !important; }
                     .mobile-toggle { display: block !important; }
+                    .mobile-only-flex { display: flex !important; align-items: center; gap: 0.5rem; }
                 }
             `}</style>
             <ProfileDrawer isOpen={isProfileOpen} onClose={() => setIsProfileOpen(false)} />

@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title } from 'chart.js';
 import { Pie, Bar } from 'react-chartjs-2';
-import { Share2, TrendingUp, TrendingDown, Wallet, ArrowUpRight, ArrowDownLeft, Download, Upload, CreditCard, LayoutDashboard, ChevronLeft, ChevronRight, Smartphone, Save, PlusCircle, MinusCircle, X, Calendar, FileText, Loader, Lightbulb, Target } from 'lucide-react';
+import { Share2, TrendingUp, TrendingDown, Wallet, ArrowUpRight, ArrowDownLeft, Download, Upload, CreditCard, LayoutDashboard, ChevronLeft, ChevronRight, Smartphone, Save, PlusCircle, MinusCircle, X, Calendar, FileText, Loader, Lightbulb, Target, AlertCircle } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 import { parseMpesaMessage } from '../utils/mpesaParser';
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title);
@@ -15,8 +16,10 @@ const TYPE_LABELS = {
 };
 
 const Dashboard = () => {
+    const navigate = useNavigate();
     const [report, setReport] = useState(null);
-    const [month, setMonth] = useState(new Date().toLocaleDateString('en-CA', { timeZone: 'Africa/Nairobi' }).slice(0, 7));
+    const [month, setMonth] = useState(new Date().toISOString().slice(0, 7));
+    const [loading, setLoading] = useState(true);
     const [mpesaText, setMpesaText] = useState('');
     const [parsedData, setParsedData] = useState(null);
     const [activeSlide, setActiveSlide] = useState(0);
@@ -25,12 +28,14 @@ const Dashboard = () => {
     const [loadingAdvice, setLoadingAdvice] = useState(false);
     const [savingsPop, setSavingsPop] = useState(null); // { amount, savings }
     const [exportingPdf, setExportingPdf] = useState(false);
+    const [showConfetti, setShowConfetti] = useState(false);
+    const [activeAlerts, setActiveAlerts] = useState([]);
 
     // Inline Cash-In form state
     const [showCashInForm, setShowCashInForm] = useState(false);
     const [ciAmount, setCiAmount] = useState('');
     const [ciSource, setCiSource] = useState('');
-    const [ciDate, setCiDate] = useState(new Date().toLocaleDateString('en-CA', { timeZone: 'Africa/Nairobi' }));
+    const [ciDate, setCiDate] = new Date().toLocaleDateString('en-CA', { timeZone: 'Africa/Nairobi' });
     const [ciDesc, setCiDesc] = useState('');
     const [ciSaving, setCiSaving] = useState(false);
 
@@ -39,7 +44,7 @@ const Dashboard = () => {
     const [coAmount, setCoAmount] = useState('');
     const [coTitle, setCoTitle] = useState('');
     const [coCategory, setCoCategory] = useState('');
-    const [coDate, setCoDate] = useState(new Date().toLocaleDateString('en-CA', { timeZone: 'Africa/Nairobi' }));
+    const [coDate, setCoDate] = new Date().toLocaleDateString('en-CA', { timeZone: 'Africa/Nairobi' });
     const [coDesc, setCoDesc] = useState('');
     const [coSaving, setCoSaving] = useState(false);
 
@@ -119,9 +124,42 @@ const Dashboard = () => {
         }
     };
 
+    const fetchAlerts = async () => {
+        try {
+            const { data } = await api.get('/notifications');
+            setActiveAlerts(data.filter(n => !n.isRead).slice(0, 3));
+        } catch (err) {
+            console.error('Failed to fetch alerts');
+        }
+    };
+
+    const handleMarkAsRead = async (id) => {
+        // Optimistic update: Remove from UI immediately
+        setActiveAlerts(prev => prev.filter(a => a._id !== id));
+
+        try {
+            await api.put(`/notifications/${id}`);
+            // Re-fetch in background to ensure sync and potentially fill the 3-item limit
+            const { data } = await api.get('/notifications');
+            setActiveAlerts(data.filter(n => !n.isRead).slice(0, 3));
+            fetchReport();
+            window.dispatchEvent(new Event('notifications-updated'));
+        } catch (err) {
+            console.error('Failed to mark as read');
+            fetchAlerts(); // Rollback on error
+        }
+    };
+
+    const handleResolve = async (alert) => {
+        // Mark as read in UI first for instant feedback
+        handleMarkAsRead(alert._id);
+        navigate(alert.link);
+    };
+
     useEffect(() => {
         fetchReport();
         fetchAiAdvice();
+        fetchAlerts();
     }, [month]);
 
 
@@ -389,10 +427,10 @@ const Dashboard = () => {
     const CHART_COLORS = ['#0f172a', '#2563eb', '#16a34a', '#dc2626', '#d97706', '#94a3b8', '#8b5cf6', '#ec4899'];
 
     const expenseData = {
-        labels: Object.keys(report.expenseByCategory).map(k => shortLabels[k] || k.substring(0, 3).toUpperCase()),
+        labels: Object.keys(report.allTimeExpenseByCategory || {}).map(k => shortLabels[k] || k.substring(0, 3).toUpperCase()),
         datasets: [{
             label: 'Amount (Ksh)',
-            data: Object.values(report.expenseByCategory),
+            data: Object.values(report.allTimeExpenseByCategory || {}),
             backgroundColor: CHART_COLORS,
             borderRadius: 6,
             barThickness: 30,
@@ -403,7 +441,7 @@ const Dashboard = () => {
     const barData = {
         labels: ['CASH IN', 'CASH OUT'],
         datasets: [{
-            data: [report.totalIncome, report.totalExpenses],
+            data: [report.allTimeTotalIncome || 0, report.allTimeTotalExpenses || 0],
             backgroundColor: ['#16a34a', '#dc2626'],
             borderRadius: 6,
             barThickness: 30,
@@ -630,6 +668,74 @@ const Dashboard = () => {
                     </div>
                 </div>
             </div>
+
+            {/* Critical Alerts Banner */}
+            {activeAlerts.length > 0 && (
+                <div style={{
+                    marginBottom: '2rem',
+                    background: '#fff',
+                    border: '1px solid #fee2e2',
+                    borderLeft: '4px solid #ef4444',
+                    borderRadius: '8px',
+                    overflow: 'hidden',
+                    animation: 'pulse 2s infinite'
+                }}>
+                    <style>{`
+                        @keyframes pulse {
+                            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+                            70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+                            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+                        }
+                    `}</style>
+                    <div style={{ padding: '0.75rem 1.25rem', background: '#fef2f2', borderBottom: '1px solid #fee2e2', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <h3 style={{ margin: 0, fontSize: '0.75rem', fontWeight: '900', color: '#991b1b', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <AlertCircle size={16} /> ACTION REQUIRED: {activeAlerts.length} URGENT ALERTS
+                        </h3>
+                        <Link to="/notifications" style={{ fontSize: '0.65rem', fontWeight: '800', color: '#ef4444', textDecoration: 'none' }}>VIEW ALL</Link>
+                    </div>
+                    {activeAlerts.map((alert, idx) => (
+                        <div key={alert._id} style={{
+                            padding: '0.75rem 1.25rem',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            borderBottom: idx === activeAlerts.length - 1 ? 'none' : '1px solid #f1f5f9',
+                            animation: 'slideIn 0.3s ease-out'
+                        }}>
+                            <style>{`
+                                @keyframes slideIn { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
+                            `}</style>
+                            <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                                <div style={{
+                                    width: '8px',
+                                    height: '8px',
+                                    borderRadius: '50%',
+                                    background: alert.type === 'budget' ? '#ef4444' : '#eab308'
+                                }}></div>
+                                <div style={{ fontSize: '0.85rem', fontWeight: '700', color: '#1e293b' }}>{alert.message}</div>
+                            </div>
+                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                <button
+                                    onClick={() => handleMarkAsRead(alert._id)}
+                                    className="btn"
+                                    style={{ padding: '0.3rem 0.6rem', fontSize: '0.6rem', background: '#f1f5f9', border: '1px solid #e2e8f0', color: '#64748b', fontWeight: '800' }}
+                                >
+                                    MARK AS READ
+                                </button>
+                                {alert.link && (
+                                    <button
+                                        onClick={() => handleResolve(alert)}
+                                        className="btn btn-primary"
+                                        style={{ padding: '0.3rem 0.8rem', fontSize: '0.6rem', background: '#0f172a', fontWeight: '800' }}
+                                    >
+                                        RESOLVE
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
 
             {/* Quick Action Hub */}
             <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '1.5rem', marginBottom: '2rem' }}>
@@ -884,51 +990,115 @@ const Dashboard = () => {
                 </div>
             </div>
 
-            {/* Insights Carousel */}
-            <div className="card" style={{ marginBottom: '2rem', background: '#f8fafc', position: 'relative', overflow: 'hidden' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                    <h3 style={{ fontSize: '0.9rem', fontWeight: '900', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <LayoutDashboard size={18} color="#0f172a" /> SMART FINANCIAL INSIGHTS
-                    </h3>
-                    <div style={{ display: 'flex', gap: '0.5rem' }}>
-                        <button onClick={() => setActiveSlide(prev => (prev === 0 ? recommendations.length - 1 : prev - 1))} style={{ padding: '0.4rem', background: '#fff', border: '1px solid #e2e8f0', color: '#0f172a' }}>
-                            <ChevronLeft size={16} />
-                        </button>
-                        <button onClick={() => setActiveSlide(prev => (prev === recommendations.length - 1 ? 0 : prev + 1))} style={{ padding: '0.4rem', background: '#fff', border: '1px solid #e2e8f0', color: '#0f172a' }}>
-                            <ChevronRight size={16} />
-                        </button>
+            {/* Mid Section: AI Insights & Budget Tracking */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '2rem' }}>
+
+                {/* Insights Carousel */}
+                <div className="card" style={{ background: '#f8fafc', position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                        <h3 style={{ fontSize: '0.9rem', fontWeight: '900', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <LayoutDashboard size={18} color="#0f172a" /> SMART FINANCIAL INSIGHTS
+                        </h3>
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                            <button onClick={() => setActiveSlide(prev => (prev === 0 ? recommendations.length - 1 : prev - 1))} style={{ padding: '0.4rem', background: '#fff', border: '1px solid #e2e8f0', color: '#0f172a' }}>
+                                <ChevronLeft size={16} />
+                            </button>
+                            <button onClick={() => setActiveSlide(prev => (prev === recommendations.length - 1 ? 0 : prev + 1))} style={{ padding: '0.4rem', background: '#fff', border: '1px solid #e2e8f0', color: '#0f172a' }}>
+                                <ChevronRight size={16} />
+                            </button>
+                        </div>
+                    </div>
+
+                    <div style={{ transition: 'all 0.5s ease', flex: 1 }}>
+                        {loadingAdvice ? (
+                            <div style={{ padding: '1.5rem', textAlign: 'center', width: '100%', color: '#64748b', fontSize: '0.85rem', fontWeight: '700' }}>
+                                GENERIC AI ANALYSIS IN PROGRESS...
+                            </div>
+                        ) : (
+                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1.5rem' }}>
+                                <div style={{ padding: '1rem', background: '#fff', border: '1px solid #e2e8f0' }}>
+                                    {recommendations[activeSlide]?.icon}
+                                </div>
+                                <div>
+                                    <h4 style={{ fontWeight: '900', fontSize: '1rem', color: '#0f172a', marginBottom: '0.5rem' }}>{recommendations[activeSlide]?.title}</h4>
+                                    <p style={{ fontSize: '0.9rem', color: '#64748b', fontWeight: '500', lineHeight: '1.6' }}>{recommendations[activeSlide]?.desc}</p>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'center', gap: '0.4rem', marginTop: '1.5rem' }}>
+                        {recommendations.map((_, i) => (
+                            <div key={i} style={{ width: '8px', height: '8px', borderRadius: '50%', background: activeSlide === i ? '#0f172a' : '#cbd5e1', transition: 'all 0.3s' }} />
+                        ))}
                     </div>
                 </div>
 
-                <div style={{ transition: 'all 0.5s ease' }}>
-                    {loadingAdvice ? (
-                        <div style={{ padding: '1.5rem', textAlign: 'center', width: '100%', color: '#64748b', fontSize: '0.85rem', fontWeight: '700' }}>
-                            GENERIC AI ANALYSIS IN PROGRESS...
+                {/* Active Category Budgets Tracker */}
+                <div className="card" style={{ display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                        <h3 style={{ fontSize: '0.9rem', fontWeight: '900', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.5rem', textTransform: 'uppercase' }}>
+                            <Target size={18} color="#dc2626" /> Budget Watchlist
+                        </h3>
+                    </div>
+
+                    {(!report.activeBudgets || report.activeBudgets.length === 0) ? (
+                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '2rem', color: '#94a3b8', border: '1px dashed #e2e8f0', borderRadius: '8px' }}>
+                            <p style={{ fontSize: '0.8rem', fontWeight: '700', margin: 0 }}>NO ACTIVE BUDGETS SET</p>
+                            <span style={{ fontSize: '0.7rem' }}>Head to the Budgets tab to set spending limits.</span>
                         </div>
                     ) : (
-                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1.5rem' }}>
-                            <div style={{ padding: '1rem', background: '#fff', border: '1px solid #e2e8f0' }}>
-                                {recommendations[activeSlide]?.icon}
-                            </div>
-                            <div>
-                                <h4 style={{ fontWeight: '900', fontSize: '1rem', color: '#0f172a', marginBottom: '0.5rem' }}>{recommendations[activeSlide]?.title}</h4>
-                                <p style={{ fontSize: '0.9rem', color: '#64748b', fontWeight: '500', lineHeight: '1.6' }}>{recommendations[activeSlide]?.desc}</p>
-                            </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', overflowY: 'auto', maxHeight: '250px', paddingRight: '0.5rem' }}>
+                            {report.activeBudgets.map(budget => {
+                                const spent = budget.category === 'Monthly'
+                                    ? Object.values(report.expenseByCategory).reduce((a, b) => a + b, 0)
+                                    : (report.expenseByCategory[budget.category] || 0);
+
+                                const limit = budget.amount;
+                                const percentage = Math.min((spent / limit) * 100, 100);
+                                const isWarning = percentage >= 85 && percentage < 100;
+                                const isDanger = percentage >= 100;
+
+                                let barColor = '#16a34a'; // Green by default on dash
+                                if (isWarning) barColor = '#f59e0b';
+                                if (isDanger) barColor = '#ef4444';
+
+                                return (
+                                    <div key={budget._id}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.3rem' }}>
+                                            <span style={{ fontSize: '0.75rem', fontWeight: '800', color: '#0f172a', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                                                {budget.category}
+                                                {isDanger && <AlertCircle size={12} color="#dc2626" />}
+                                            </span>
+                                            <span style={{ fontSize: '0.75rem', fontWeight: '900', color: isDanger ? '#dc2626' : '#64748b' }}>
+                                                {percentage.toFixed(0)}%
+                                            </span>
+                                        </div>
+                                        <div style={{ width: '100%', height: '6px', background: '#f1f5f9', borderRadius: '3px', overflow: 'hidden', marginBottom: '0.3rem' }}>
+                                            <div style={{
+                                                width: `${percentage}%`,
+                                                height: '100%',
+                                                background: barColor,
+                                                borderRadius: '3px',
+                                                transition: 'width 1s ease-out'
+                                            }} />
+                                        </div>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.65rem', fontWeight: '700', color: '#94a3b8' }}>
+                                            <span>Spent: {spent.toLocaleString()}</span>
+                                            <span>Remaining: {Math.max(limit - spent, 0).toLocaleString()}</span>
+                                        </div>
+                                    </div>
+                                );
+                            })}
                         </div>
                     )}
-                </div>
-
-                <div style={{ display: 'flex', justifyContent: 'center', gap: '0.4rem', marginTop: '1.5rem' }}>
-                    {recommendations.map((_, i) => (
-                        <div key={i} style={{ width: '8px', height: '8px', borderRadius: '50%', background: activeSlide === i ? '#0f172a' : '#cbd5e1', transition: 'all 0.3s' }} />
-                    ))}
                 </div>
             </div>
 
             {/* Bottom Analytics */}
             <div id="dashboard-charts-container" className="dashboard-charts" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', alignItems: 'start', padding: '10px 0' }}>
                 <div className="card" style={{ height: '100%' }}>
-                    <h3 style={{ marginBottom: '1.5rem', fontSize: '0.85rem', fontWeight: '900', textTransform: 'uppercase', color: '#64748b', letterSpacing: '0.05em' }}>Inflow vs Outflow</h3>
+                    <h3 style={{ marginBottom: '1.5rem', fontSize: '0.85rem', fontWeight: '900', textTransform: 'uppercase', color: '#64748b', letterSpacing: '0.05em' }}>All-Time Inflow vs Outflow</h3>
                     <div style={{ height: '300px' }}>
                         <Bar data={barData} options={{
                             responsive: true,
@@ -942,8 +1112,8 @@ const Dashboard = () => {
                     </div>
                 </div>
                 <div className="card" style={{ height: '100%' }}>
-                    <h3 style={{ marginBottom: '1.5rem', fontSize: '0.85rem', fontWeight: '900', textTransform: 'uppercase', color: '#64748b', letterSpacing: '0.05em' }}>Expense Breakdown</h3>
-                    {Object.keys(report.expenseByCategory).length > 0 ? (
+                    <h3 style={{ marginBottom: '1.5rem', fontSize: '0.85rem', fontWeight: '900', textTransform: 'uppercase', color: '#64748b', letterSpacing: '0.05em' }}>All-Time Expense Breakdown</h3>
+                    {Object.keys(report.allTimeExpenseByCategory || {}).length > 0 ? (
                         <>
                             <div style={{ height: '300px', marginBottom: '1rem' }}>
                                 <Bar
@@ -977,7 +1147,7 @@ const Dashboard = () => {
                                 />
                             </div>
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.5rem 1rem', padding: '0 0.5rem' }}>
-                                {Object.keys(report.expenseByCategory).map((category, i) => (
+                                {Object.keys(report.allTimeExpenseByCategory || {}).map((category, i) => (
                                     <div key={category} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.65rem' }}>
                                         <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }}></div>
                                         <span style={{ fontWeight: '900', color: '#0f172a', minWidth: '24px' }}>{shortLabels[category] || category.substring(0, 3).toUpperCase()}</span>
