@@ -120,6 +120,19 @@ a {
   border: 1px solid var(--border);
 }
 
+/* Navbar Logo Constraint & Aesthetics */
+.navbar-logo {
+  height: 42px; /* Professional desktop height */
+  width: auto;
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.05));
+  mix-blend-mode: multiply;
+}
+
+.navbar-logo:hover {
+  transform: scale(1.05); /* Subtle micro-animation */
+}
+
 /* Responsive Utilities */
 .grid-responsive {
   display: grid;
@@ -136,11 +149,13 @@ a {
 @media (max-width: 768px) {
   .grid-responsive {
     grid-template-columns: 1fr;
-    gap: 1.5rem;
+    gap: 1rem;
   }
 
   .dashboard-stats {
-    grid-template-columns: 1fr 1fr !important;
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 0.75rem !important;
   }
 
   .dashboard-charts {
@@ -148,30 +163,153 @@ a {
   }
 
   h2 {
-    font-size: 1.5rem;
+    font-size: 1.25rem !important;
+    letter-spacing: -0.02em !important;
+  }
+
+  p {
+    font-size: 0.8rem !important;
   }
 
   .container {
-    padding: 0 1rem;
+    padding: 0 0.75rem 2rem 0.75rem !important;
+    overflow-x: hidden;
   }
 
   .nav-links {
-    display: none;
-    /* We'll handle this in Navbar.jsx */
+    display: none !important;
+  }
+
+  .mobile-toggle {
+    display: block !important;
+  }
+
+  /* Mobile Popover Menu Styles */
+  .mobile-sidebar {
+    position: fixed;
+    top: 50px; /* Adjusted to align perfectly with the ticker top */
+    right: 0; /* Touches the right edge */
+    width: max-content;
+    min-width: 170px;
+    height: auto;
+    max-height: 80vh;
+    background: #fff;
+    z-index: 2000;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: -5px 10px 25px -5px rgba(0, 0, 0, 0.05); /* Softened left shadow */
+    display: flex;
+    flex-direction: column;
+    padding: 0.25rem 0; /* Balanced padding */
+    border-radius: 0; /* Sharp corners */
+    border: 1px solid #e2e8f0;
+    border-top: none;
+    border-right: none;
+    overflow-y: auto;
+  }
+
+  .mobile-sidebar a, .mobile-sidebar div {
+    white-space: nowrap !important;
+  }
+
+  .sidebar-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: transparent;
+    z-index: 1999;
+  }
+
+  /* Compact Dashboard Header */
+  .dashboard-header-btns {
+    width: 100%;
+    display: grid !important;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem !important;
+    margin-top: 0.5rem;
+  }
+
+  .dashboard-header-flex {
+    flex-direction: column !important;
+    align-items: center !important;
+    text-align: center !important;
+    gap: 1.25rem !important;
+  }
+
+  .total-box {
+    margin: 0 auto !important;
+    text-align: center !important;
+  }
+
+  .date-input-wrapper {
+    grid-column: span 2;
+  }
+
+  .date-input-wrapper input {
+    width: 100% !important;
+  }
+
+  /* Alert Banner Refinement */
+  .alert-banner-content {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 0.5rem !important;
+  }
+
+  .alert-btn-group {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  /* Financial Ticker */
+  .nav-container {
+    padding-bottom: 0 !important;
+    padding-top: 0 !important;
+  }
+
+  /* Compact Navbar for Mobile */
+  nav.main-navbar {
+    padding: 0.1rem 0 !important;
+    margin-bottom: 0 !important;
+  }
+
+  .navbar-logo {
+    height: 36px !important;
+    width: auto;
+    mix-blend-mode: multiply;
+  }
+
+  .main-navbar h2, .main-navbar div[style*="fontSize: '1.3rem'"] {
+    font-size: 1.05rem !important;
+  }
+
+  .main-navbar span[style*="fontSize: '0.55rem'"] {
+    font-size: 0.48rem !important;
   }
 }
 
 @media (max-width: 480px) {
-  .dashboard-stats {
-    grid-template-columns: 1fr !important;
-  }
-
   .btn {
-    padding: 0.6rem 1rem;
-    font-size: 0.9rem;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.75rem;
+    border-radius: 8px;
   }
 
   .card {
-    padding: 1.25rem;
+    padding: 1rem;
+    border-radius: 12px;
   }
 }
+
+/* Base hidden state for mobile elements on desktop */
+.mobile-sidebar, .sidebar-overlay {
+  display: none;
+}
+
+/* Ensure they are visible when in media query */
+@media (max-width: 768px) {
+  .mobile-sidebar, .sidebar-overlay {
+    display: flex;
+  }
+}

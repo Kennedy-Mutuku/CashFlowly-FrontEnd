@@ -642,13 +642,13 @@ const Dashboard = () => {
 
 
             {/* Live Financial Ticker */}
-            <div style={{
+            <div className="financial-ticker" style={{
                 overflow: 'hidden',
                 background: '#0f172a',
                 color: '#fff',
                 padding: '0.75rem 0',
                 whiteSpace: 'nowrap',
-                margin: '-2rem -2rem 2rem -2rem',
+                margin: '2px -1rem 1rem -1rem', // Added 2px top margin for perfect alignment with sidebar
                 borderBottom: '2px solid #1e293b'
             }}>
                 <div style={{ display: 'inline-block', whiteSpace: 'nowrap', paddingRight: '100%', animation: 'ticker 30s linear infinite' }}>
@@ -659,25 +659,25 @@ const Dashboard = () => {
                             <div className="ticker-item"><span>TOTAL OUT:</span> <span style={{ color: '#ef4444' }}>Ksh {report.totalExpenses.toLocaleString()}</span></div>
                             <div className="ticker-item"><span>ZIIDI BAL:</span> <span style={{ color: '#fbbf24' }}>Ksh {report.totalSavings?.toLocaleString() || 0}</span></div>
                             <div className="ticker-item"><span>MONTH:</span> {new Date(month).toLocaleString('default', { month: 'long', year: 'numeric' }).toUpperCase()}</div>
-                            <div className="ticker-item"><span>CASHFLOWLY:</span> YOUR AI-POWERED FINANCIAL CO-PILOT — TRACK SPENDING, AUTOMATE SAVINGS & GROW WEALTH.</div>
+                            <div className="ticker-item"><span>CASHFLOWLY:</span> YOUR AI-POWERED FINANCIAL CO-PILOT.</div>
                         </React.Fragment>
                     ))}
                 </div>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-                <div>
+            <div className="dashboard-header-flex" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+                <div style={{ minWidth: '200px' }}>
                     <h2 style={{ fontWeight: '900', fontSize: '1.75rem', letterSpacing: '-0.03em', color: '#0f172a' }}>DASHBOARD OVERVIEW</h2>
                     <p style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: '600' }}>Your financial command center at a glance.</p>
                 </div>
-                <div style={{ display: 'flex', gap: '0.75rem' }}>
+                <div className="dashboard-header-btns" style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
                     <button onClick={handleExportPDF} disabled={exportingPdf} className="btn" style={{ background: '#0f172a', border: '1px solid #0f172a', color: '#fff', fontWeight: '700', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem', opacity: exportingPdf ? 0.7 : 1 }}>
                         {exportingPdf ? <Loader size={16} className="spin" /> : <FileText size={16} />} EXPORT PDF
                     </button>
                     <button onClick={handleExport} className="btn" style={{ background: '#f1f5f9', border: '1px solid #e2e8f0', color: '#0f172a', fontWeight: '700', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         <Download size={16} /> CSV
                     </button>
-                    <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                    <div className="date-input-wrapper" style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                         <Calendar size={16} style={{ position: 'absolute', left: '10px', color: '#64748b' }} />
                         <input
                             type="month"
@@ -692,7 +692,7 @@ const Dashboard = () => {
             {/* Critical Alerts Banner */}
             {activeAlerts.length > 0 && (
                 <div style={{
-                    marginBottom: '2rem',
+                    marginBottom: '1.25rem',
                     background: '#fff',
                     border: '1px solid #fee2e2',
                     borderLeft: '4px solid #ef4444',
@@ -707,14 +707,14 @@ const Dashboard = () => {
                             100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
                         }
                     `}</style>
-                    <div style={{ padding: '0.75rem 1.25rem', background: '#fef2f2', borderBottom: '1px solid #fee2e2', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                            <h3 style={{ margin: 0, fontSize: '0.75rem', fontWeight: '900', color: '#991b1b', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                <AlertCircle size={16} /> ACTION REQUIRED: {activeAlerts.length} IMPORTANT ALERTS
+                    <div className="alert-header" style={{ padding: '0.6rem 1rem', background: '#fef2f2', borderBottom: '1px solid #fee2e2', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1 }}>
+                            <h3 style={{ margin: 0, fontSize: '0.7rem', fontWeight: '900', color: '#991b1b', display: 'flex', alignItems: 'center', gap: '0.4rem', whiteSpace: 'nowrap' }}>
+                                <AlertCircle size={14} /> ALERTS ({activeAlerts.length})
                             </h3>
                             <button
                                 onClick={handleMarkAllAsRead}
-                                style={{ background: '#991b1b', color: 'white', border: 'none', borderRadius: '4px', padding: '2px 8px', fontSize: '0.6rem', fontWeight: '800', cursor: 'pointer', textTransform: 'uppercase' }}
+                                style={{ background: '#991b1b', color: 'white', border: 'none', borderRadius: '4px', padding: '2px 6px', fontSize: '0.55rem', fontWeight: '800', cursor: 'pointer', textTransform: 'uppercase' }}
                             >
                                 Mark All as Read
                             </button>
@@ -722,8 +722,8 @@ const Dashboard = () => {
                         <Link to="/notifications" style={{ fontSize: '0.65rem', fontWeight: '800', color: '#ef4444', textDecoration: 'none' }}>VIEW HUB</Link>
                     </div>
                     {activeAlerts.map((alert, idx) => (
-                        <div key={alert._id} style={{
-                            padding: '0.75rem 1.25rem',
+                        <div key={alert._id} className="alert-banner-content" style={{
+                            padding: '0.65rem 1rem',
                             display: 'flex',
                             justifyContent: 'space-between',
                             alignItems: 'center',
@@ -733,20 +733,21 @@ const Dashboard = () => {
                             <style>{`
                                 @keyframes slideIn { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
                             `}</style>
-                            <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                            <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flex: 1 }}>
                                 <div style={{
-                                    width: '8px',
-                                    height: '8px',
+                                    width: '6px',
+                                    height: '6px',
                                     borderRadius: '50%',
+                                    flexShrink: 0,
                                     background: alert.type === 'budget' ? '#ef4444' : '#eab308'
                                 }}></div>
-                                <div style={{ fontSize: '0.85rem', fontWeight: '700', color: '#1e293b' }}>{alert.message}</div>
+                                <div style={{ fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', lineHeight: '1.4' }}>{alert.message}</div>
                             </div>
-                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <div className="alert-btn-group" style={{ display: 'flex', gap: '0.4rem' }}>
                                 <button
                                     onClick={() => handleMarkAsRead(alert._id)}
                                     className="btn"
-                                    style={{ padding: '0.3rem 0.6rem', fontSize: '0.6rem', background: '#f1f5f9', border: '1px solid #e2e8f0', color: '#64748b', fontWeight: '800' }}
+                                    style={{ padding: '0.25rem 0.5rem', fontSize: '0.65rem', background: '#f1f5f9', border: '1px solid #e2e8f0', color: '#64748b', fontWeight: '800' }}
                                 >
                                     MARK AS READ
                                 </button>
@@ -754,7 +755,7 @@ const Dashboard = () => {
                                     <button
                                         onClick={() => handleResolve(alert)}
                                         className="btn btn-primary"
-                                        style={{ padding: '0.3rem 0.8rem', fontSize: '0.6rem', background: '#0f172a', fontWeight: '800' }}
+                                        style={{ padding: '0.4rem 0.6rem', fontSize: '0.65rem', background: '#0f172a', fontWeight: '800' }}
                                     >
                                         RESOLVE
                                     </button>
@@ -766,7 +767,7 @@ const Dashboard = () => {
             )}
 
             {/* Quick Action Hub */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '1.5rem', marginBottom: '2rem' }}>
+            <div className="grid-responsive" style={{ marginBottom: '2rem' }}>
                 {/* M-PESA Smart Sync — Central Hub */}
                 <div className="card" style={{ background: '#f8fafc', border: '2px dashed #cbd5e1', display: 'flex', flexDirection: 'column', justifyContent: 'flex-start' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
@@ -1019,7 +1020,7 @@ const Dashboard = () => {
             </div>
 
             {/* Mid Section: AI Insights & Budget Tracking */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '2rem' }}>
+            <div className="grid-responsive" style={{ marginBottom: '2rem' }}>
 
                 {/* Active Category Budgets Tracker */}
                 <div className="card" style={{ display: 'flex', flexDirection: 'column' }}>
@@ -1090,24 +1091,24 @@ const Dashboard = () => {
                         <div style={{ fontSize: '0.65rem', fontWeight: '800', color: '#64748b', background: '#fff', padding: '2px 8px', borderRadius: '4px', border: '1px solid #e2e8f0' }}>ALL-TIME DATA</div>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', flex: 1 }}>
-                        <div style={{ background: '#fff', padding: '1rem', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                    <div className="dashboard-stats" style={{ display: 'grid', gap: '1rem', flex: 1 }}>
+                        <div style={{ background: '#fff', padding: '1rem', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '0.25rem', height: '100%', boxSizing: 'border-box' }}>
                             <span style={{ fontSize: '0.6rem', fontWeight: '800', color: '#64748b', textTransform: 'uppercase' }}>Total Received</span>
                             <span style={{ fontSize: '1.1rem', fontWeight: '900', color: '#16a34a' }}>Ksh {report.allTimeTotalIncome?.toLocaleString() || 0}</span>
                         </div>
-                        <div style={{ background: '#fff', padding: '1rem', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                        <div style={{ background: '#fff', padding: '1rem', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '0.25rem', height: '100%', boxSizing: 'border-box' }}>
                             <span style={{ fontSize: '0.6rem', fontWeight: '800', color: '#64748b', textTransform: 'uppercase' }}>Total Spent</span>
                             <span style={{ fontSize: '1.1rem', fontWeight: '900', color: '#dc2626' }}>Ksh {report.allTimeTotalExpenses?.toLocaleString() || 0}</span>
                         </div>
-                        <div style={{ background: '#fff', padding: '1rem', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                        <div style={{ background: '#fff', padding: '1rem', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '0.25rem', height: '100%', boxSizing: 'border-box' }}>
                             <span style={{ fontSize: '0.6rem', fontWeight: '800', color: '#64748b', textTransform: 'uppercase' }}>Debts to Pay</span>
                             <span style={{ fontSize: '1.1rem', fontWeight: '900', color: '#ef4444' }}>Ksh {report.allTimeDebts?.toPay?.toLocaleString() || 0}</span>
                         </div>
-                        <div style={{ background: '#fff', padding: '1rem', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                        <div style={{ background: '#fff', padding: '1rem', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '0.25rem', height: '100%', boxSizing: 'border-box' }}>
                             <span style={{ fontSize: '0.6rem', fontWeight: '800', color: '#64748b', textTransform: 'uppercase' }}>To be Paid</span>
                             <span style={{ fontSize: '1.1rem', fontWeight: '900', color: '#2563eb' }}>Ksh {report.allTimeDebts?.toReceive?.toLocaleString() || 0}</span>
                         </div>
-                        <div style={{ background: '#0f172a', padding: '1rem', gridColumn: 'span 2', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ background: '#0f172a', padding: '0.85rem 1.25rem', gridColumn: 'span 2', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderRadius: '4px' }}>
                             <div>
                                 <span style={{ fontSize: '0.6rem', fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase' }}>Available Savings</span>
                                 <div style={{ fontSize: '1.25rem', fontWeight: '900', color: '#fff' }}>Ksh {report.totalSavings?.toLocaleString() || 0}</div>

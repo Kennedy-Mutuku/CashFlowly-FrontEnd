@@ -177,13 +177,13 @@ const Budget = () => {
                 @keyframes fillBar { from { width: 0; } to { width: var(--target-width); } }
             `}</style>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+            <div className="dashboard-header-flex" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
                 <h2 style={{ fontWeight: '900', fontSize: '1.75rem', letterSpacing: '-0.03em', color: '#0f172a', margin: 0 }}>Budgets & Goals</h2>
                 <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                     <Calendar size={16} style={{ position: 'absolute', left: '10px', color: '#64748b' }} />
                     <input
                         type="month"
-                        style={{ padding: '0.55rem 0.55rem 0.55rem 2.2rem', background: '#fff', border: '1px solid #e2e8f0', color: '#0f172a', fontWeight: '800', fontSize: '0.8rem', borderRadius: '6px' }}
+                        style={{ padding: '0.55rem 0.55rem 0.55rem 2.22rem', background: '#fff', border: '1px solid #e2e8f0', color: '#0f172a', fontWeight: '800', fontSize: '0.8rem', borderRadius: '6px' }}
                         value={month}
                         onChange={(e) => setMonth(e.target.value)}
                         title="Viewing month for expenses"
@@ -208,7 +208,7 @@ const Budget = () => {
                             <label style={{ color: '#475569', fontWeight: '700', fontSize: '0.75rem', textTransform: 'uppercase' }}>Limit Amount (Ksh)</label>
                             <input type="number" value={bgAmount} onChange={(e) => setBgAmount(e.target.value)} required placeholder="0.00" style={{ padding: '0.6rem' }} />
                         </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                        <div className="grid-responsive" style={{ display: 'grid', gap: '1rem' }}>
                             <div className="input-group" style={{ margin: 0 }}>
                                 <label style={{ color: '#475569', fontWeight: '700', fontSize: '0.75rem', textTransform: 'uppercase' }}>Start Date</label>
                                 <input type="date" value={bgStartDate} onChange={(e) => setBgStartDate(e.target.value)} required style={{ padding: '0.6rem' }} />

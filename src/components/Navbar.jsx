@@ -54,9 +54,9 @@ const Navbar = () => {
     ];
 
     return (
-        <nav style={{
-            marginBottom: '2rem',
-            padding: '1rem 0', // Reduced padding to retain original navbar height
+        <nav className="main-navbar" style={{
+            marginBottom: '1rem',
+            padding: '0.5rem 0', 
             position: 'sticky',
             top: 0,
             zIndex: 1000,
@@ -64,22 +64,18 @@ const Navbar = () => {
             borderBottom: '1px solid #e2e8f0',
             boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
         }}>
-            <div className="container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', maxWidth: '1440px' }}>
-                <Link to="/" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none', gap: '0.6rem', flexShrink: 0 }}>
+            <div className="container nav-container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', maxWidth: '1440px' }}>
+                <Link to="/" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none', gap: '0.8rem', flexShrink: 0 }}>
                     <img
                         src={logo}
                         alt="CashFlowly Logo"
-                        style={{
-                            height: '52px', // Slightly reduced to save horizontal space
-                            width: 'auto',
-                            mixBlendMode: 'multiply'
-                        }}
+                        className="navbar-logo"
                     />
                     <div style={{ display: 'flex', flexDirection: 'column' }}>
-                        <div style={{ fontWeight: '800', fontSize: '1.3rem', color: '#0f172a', letterSpacing: '-0.025em', lineHeight: '1' }}>
+                        <div style={{ fontWeight: '900', fontSize: '1.2rem', color: '#1e293b', letterSpacing: '-0.03em', lineHeight: '1', display: 'flex', alignItems: 'center' }}>
                             CASHFLOWLY
                         </div>
-                        <span style={{ fontSize: '0.55rem', fontWeight: '900', color: '#64748b', letterSpacing: '0.15em' }}>
+                        <span style={{ fontSize: '0.55rem', fontWeight: '800', color: '#94a3b8', letterSpacing: '0.2em', marginTop: '2px' }}>
                             THE 50, 30, 20 RULE
                         </span>
                     </div>
@@ -151,93 +147,104 @@ const Navbar = () => {
                     </div>
                 </div>
 
-                <div style={{ display: 'none' }} className="mobile-only-flex">
-                    {/* Unread Indicator for Mobile Header */}
-                    {unreadCount > 0 && (
-                        <div style={{ background: '#ef4444', color: '#fff', fontSize: '0.6rem', fontWeight: '900', padding: '2px 6px', borderRadius: '10px' }}>
-                            {unreadCount} ALERTS
-                        </div>
-                    )}
-                </div>
                 {/* Mobile Toggle */}
                 <button
                     className="mobile-toggle"
                     onClick={() => setIsOpen(!isOpen)}
-                    style={{ background: 'transparent', border: 'none', color: '#0f172a', cursor: 'pointer' }}
+                    style={{ background: 'transparent', border: 'none', color: '#0f172a', cursor: 'pointer', display: 'none' }}
                 >
                     {isOpen ? <X size={24} /> : <Menu size={24} />}
                 </button>
             </div>
 
-            {/* Mobile Menu */}
+            {/* Mobile Popover Menu - ONLY rendered when open */}
             {isOpen && (
-                <div className="mobile-menu" style={{
-                    position: 'absolute',
-                    top: '100%',
-                    left: 0,
-                    width: '100%',
-                    padding: '1rem',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '0.5rem',
-                    background: '#fff',
-                    borderBottom: '1px solid #e2e8f0',
-                    boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)'
-                }}>
-                    {navItems.map((item) => {
-                        const isActive = location.pathname === item.path;
-                        const activeColor = item.label === 'Cash Out' ? '#ef4444' : '#2563eb';
-                        const activeBg = item.label === 'Cash Out' ? '#fef2f2' : '#eff6ff';
-                        return (
-                            <Link
-                                key={item.path}
-                                to={item.path}
-                                onClick={() => setIsOpen(false)}
+                <>
+                    <div 
+                        className="sidebar-overlay open" 
+                        onClick={() => setIsOpen(false)}
+                    />
+                    <div className="mobile-sidebar open">
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', overflowY: 'auto' }}>
+                            {navItems.map((item) => {
+                                const isActive = location.pathname === item.path;
+                                const activeColor = item.label === 'Cash Out' ? '#ef4444' : '#2563eb';
+                                const activeBg = item.label === 'Cash Out' ? '#fef2f2' : '#eff6ff';
+                                return (
+                                    <Link
+                                        key={item.path}
+                                        to={item.path}
+                                        onClick={() => setIsOpen(false)}
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '0.6rem',
+                                            padding: '0.65rem 0.75rem',
+                                            borderRadius: '0',
+                                            background: isActive ? activeBg : 'transparent',
+                                            color: isActive ? activeColor : '#475569',
+                                            fontWeight: isActive ? '800' : '600',
+                                            fontSize: '0.85rem',
+                                            transition: 'all 0.15s ease',
+                                            borderLeft: isActive ? `3px solid ${activeColor}` : '3px solid transparent'
+                                        }}
+                                    >
+                                        {React.cloneElement(item.icon, { size: 16, color: isActive ? activeColor : 'currentColor' })} 
+                                        {item.label}
+                                        {item.label === 'Notifications' && unreadCount > 0 && (
+                                            <span style={{ marginLeft: 'auto', background: '#ef4444', color: '#fff', fontSize: '0.6rem', padding: '1px 5px', borderRadius: '10px' }}>
+                                                {unreadCount}
+                                            </span>
+                                        )}
+                                    </Link>
+                                );
+                            })}
+                            
+                            <div style={{ padding: '0.4rem 0.75rem' }}>
+                                <div style={{ height: '1px', background: '#f1f5f9', width: '100%' }} />
+                            </div>
+
+                            <div
+                                onClick={() => {
+                                    setIsOpen(false);
+                                    setIsProfileOpen(true);
+                                }}
                                 style={{
                                     display: 'flex',
                                     alignItems: 'center',
-                                    gap: '0.75rem',
-                                    padding: '1rem',
-                                    background: isActive ? activeBg : '#f8fafc',
-                                    color: isActive ? activeColor : '#0f172a',
+                                    gap: '0.6rem',
+                                    padding: '0.65rem 0.75rem',
+                                    borderRadius: '6px',
+                                    color: '#0f172a',
                                     fontWeight: '700',
-                                    fontSize: '0.9rem',
-                                    textTransform: 'uppercase',
-                                    borderLeft: isActive ? `4px solid ${activeColor}` : '4px solid transparent'
+                                    fontSize: '0.85rem',
+                                    cursor: 'pointer'
                                 }}
                             >
-                                {React.cloneElement(item.icon, { color: isActive ? activeColor : 'currentColor' })} {item.label}
-                            </Link>
-                        );
-                    })}
-                    <div
-                        onClick={() => {
-                            setIsOpen(false);
-                            setIsProfileOpen(true);
-                        }}
-                        style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.75rem',
-                            padding: '1rem',
-                            background: '#eff6ff',
-                            color: '#2563eb',
-                            fontWeight: '700',
-                            fontSize: '0.9rem',
-                            textTransform: 'uppercase',
-                            borderLeft: '4px solid #2563eb',
-                            cursor: 'pointer'
-                        }}
-                    >
-                        <User size={18} /> MY PROFILE
+                                <User size={18} /> MY PROFILE
+                            </div>
+                            <button 
+                                onClick={handleLogout} 
+                                className="btn" 
+                                style={{ 
+                                    width: '100%', 
+                                    background: '#fef2f2', 
+                                    color: '#dc2626', 
+                                    borderRadius: '0',
+                                    padding: '0.75rem',
+                                    fontSize: '0.85rem',
+                                    justifyContent: 'center',
+                                    marginTop: 'auto',
+                                    gap: '0.5rem',
+                                    border: 'none',
+                                    borderTop: '1px solid #fee2e2'
+                                }}
+                            >
+                                <LogOut size={16} /> LOGOUT
+                            </button>
+                        </div>
                     </div>
-                    <div style={{ borderTop: '1px solid #f1f5f9', marginTop: '0.5rem', paddingTop: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ fontWeight: '800', fontSize: '0.9rem' }}>{user?.name?.toUpperCase()}</span>
-                        <button onClick={handleLogout} className="btn" style={{ background: '#fef2f2', color: '#dc2626', fontSize: '0.8rem', fontWeight: '700' }}>
-                            LOGOUT
-                        </button>
-                    </div>
-                </div>
+                </>
             )}
 
             <style>{`
