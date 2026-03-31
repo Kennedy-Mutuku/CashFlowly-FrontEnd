@@ -312,4 +312,73 @@ a {
   .mobile-sidebar, .sidebar-overlay {
     display: flex;
   }
-}
+}
+
+/* Responsive List for Records */
+.record-list {
+  display: flex;
+  flex-direction: column;
+}
+.record-header {
+  display: grid;
+  padding: 0.9rem 1.25rem;
+  background: #f8fafc;
+  border-bottom: 2px solid #e2e8f0;
+}
+.record-row {
+  display: grid;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid #f1f5f9;
+  align-items: center;
+  transition: background 0.15s;
+}
+.record-cell-mobile-label { display: none; }
+
+/* Desktop Grid setups */
+.income-grid { grid-template-columns: 2fr 2fr 1.5fr 3fr 1.5fr 0.5fr; gap: 1rem; }
+.expense-grid { grid-template-columns: 2fr 2fr 2.5fr 1.5fr 2fr 1.5fr 0.5fr; gap: 0.75rem; }
+
+.record-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+}
+.record-cell-right {
+  align-items: flex-end;
+}
+
+@media (max-width: 768px) {
+  .record-header { display: none; }
+  .record-row {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+    padding: 1rem !important;
+    background: #fff !important;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    margin-bottom: 0.75rem;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.02);
+  }
+  .record-row:last-child { margin-bottom: 0; }
+  
+  .record-cell, .record-cell-right {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    text-align: right;
+  }
+  
+  .record-cell-mobile-label {
+    display: block;
+    font-size: 0.65rem;
+    font-weight: 800;
+    color: #94a3b8;
+    text-transform: uppercase;
+  }
+  
+  .hide-on-mobile { display: none !important; }
+}

@@ -83,6 +83,41 @@ const Notifications = () => {
         <div style={{ animation: 'fadeIn 0.5s ease-out', maxWidth: '800px', margin: '0 auto' }}>
             <style>{`
                 @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+                .notif-card {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    gap: 1.5rem;
+                }
+                .notif-header {
+                    display: flex; 
+                    align-items: center; 
+                    gap: 0.5rem; 
+                    margin-bottom: 0.25rem;
+                }
+                .notif-actions {
+                    display: flex;
+                    gap: 0.5rem;
+                    align-items: center;
+                }
+                @media (max-width: 640px) {
+                    .notif-card {
+                        flex-direction: column;
+                        align-items: flex-start;
+                        gap: 1rem;
+                    }
+                    .notif-header {
+                        flex-direction: column;
+                        align-items: flex-start;
+                        gap: 0.2rem;
+                    }
+                    .notif-actions {
+                        width: 100%;
+                        padding-top: 0.75rem;
+                        border-top: 1px dashed #e2e8f0;
+                        justify-content: space-between;
+                    }
+                }
             `}</style>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
@@ -146,6 +181,7 @@ const Notifications = () => {
                     {filtered.map(n => (
                         <div
                             key={n._id}
+                            className="notif-card"
                             style={{
                                 background: n.isRead ? '#f8fafc' : '#fff',
                                 border: n.isRead ? '1px solid #e2e8f0' : '2px solid #0f172a',
@@ -153,19 +189,16 @@ const Notifications = () => {
                                 padding: '1.25rem',
                                 position: 'relative',
                                 transition: 'all 0.2s ease',
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                alignItems: 'center',
-                                gap: '1.5rem',
                                 boxShadow: n.isRead ? 'none' : '0 10px 15px -3px rgba(0,0,0,0.1)'
                             }}
                         >
                             {!n.isRead && <div style={{ position: 'absolute', left: '-2px', top: '10%', bottom: '10%', width: '4px', background: '#2563eb', borderRadius: '0 4px 4px 0' }}></div>}
 
-                            <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flex: 1 }}>
+                            <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start', flex: 1, width: '100%' }}>
                                 <div style={{
                                     width: '40px',
                                     height: '40px',
+                                    minWidth: '40px',
                                     borderRadius: '10px',
                                     background: n.isRead ? '#e2e8f0' : '#f1f5f9',
                                     display: 'flex',
@@ -175,8 +208,8 @@ const Notifications = () => {
                                     {getTypeIcon(n.type)}
                                 </div>
                                 <div style={{ flex: 1 }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-                                        <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: '900', color: '#0f172a' }}>{n.title}</h4>
+                                    <div className="notif-header">
+                                        <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: '900', color: '#0f172a' }}>{n.title}</h4>
                                         <span style={{ fontSize: '0.65rem', color: '#94a3b8', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px' }}>
                                             <Calendar size={12} /> {new Date(n.createdAt).toLocaleDateString()} at {new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                         </span>
@@ -185,28 +218,30 @@ const Notifications = () => {
                                 </div>
                             </div>
 
-                            <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                {!n.isRead && (
-                                    <button
-                                        onClick={() => markAsRead(n._id)}
-                                        className="btn"
-                                        style={{ padding: '0.4rem 0.8rem', fontSize: '0.65rem', background: '#f1f5f9', border: '1px solid #e2e8f0', color: '#64748b', fontWeight: '800' }}
-                                    >
-                                        MARK AS READ
-                                    </button>
-                                )}
-                                {n.link && (
-                                    <button
-                                        onClick={() => handleResolve(n)}
-                                        className="btn btn-primary"
-                                        style={{ padding: '0.4rem 1rem', fontSize: '0.65rem', background: '#0f172a', fontWeight: '800' }}
-                                    >
-                                        RESOLVE
-                                    </button>
-                                )}
+                            <div className="notif-actions">
+                                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                    {!n.isRead && (
+                                        <button
+                                            onClick={() => markAsRead(n._id)}
+                                            className="btn"
+                                            style={{ padding: '0.4rem 0.8rem', fontSize: '0.65rem', background: '#f1f5f9', border: '1px solid #e2e8f0', color: '#64748b', fontWeight: '800' }}
+                                        >
+                                            MARK AS READ
+                                        </button>
+                                    )}
+                                    {n.link && (
+                                        <button
+                                            onClick={() => handleResolve(n)}
+                                            className="btn btn-primary"
+                                            style={{ padding: '0.4rem 1rem', fontSize: '0.65rem', background: '#0f172a', fontWeight: '800' }}
+                                        >
+                                            RESOLVE
+                                        </button>
+                                    )}
+                                </div>
                                 <button
                                     onClick={() => deleteNotification(n._id)}
-                                    style={{ background: 'none', border: 'none', color: '#cbd5e1', cursor: 'pointer', padding: '0.5rem', transition: 'color 0.2s ease' }}
+                                    style={{ background: 'none', border: 'none', color: '#cbd5e1', cursor: 'pointer', padding: '0.5rem', transition: 'color 0.2s ease', display: 'flex', alignItems: 'center' }}
                                     onMouseEnter={(e) => e.currentTarget.style.color = '#ef4444'}
                                     onMouseLeave={(e) => e.currentTarget.style.color = '#cbd5e1'}
                                     title="Delete notification"

@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LayoutDashboard, Receipt, TrendingUp, TrendingDown, Target, LogOut, Wallet, Menu, X, Users, User, Bot, Bell } from 'lucide-react';
+import api from '../services/api';
+import { LayoutDashboard, Receipt, TrendingUp, TrendingDown, Target, LogOut, Wallet, Menu, X, Users, User, Bot, Bell, Smartphone } from 'lucide-react';
 import ProfileDrawer from './ProfileDrawer';
 import NotificationCenter from './NotificationCenter';
 import logo from '../assets/logo.png'; // Import the new logo
@@ -13,6 +14,7 @@ const Navbar = () => {
     const [isOpen, setIsOpen] = useState(false);
     const [isProfileOpen, setIsProfileOpen] = useState(false);
     const [unreadCount, setUnreadCount] = useState(0);
+    const [mpesaPendingCount, setMpesaPendingCount] = useState(0);
 
     const fetchUnreadCount = async () => {
         try {
@@ -26,12 +28,26 @@ const Navbar = () => {
     React.useEffect(() => {
         if (user) {
             fetchUnreadCount();
-            const interval = setInterval(fetchUnreadCount, 30000); // Poll every 30s
+            const interval = setInterval(fetchUnreadCount, 30000);
             const handleUpdate = () => fetchUnreadCount();
             window.addEventListener('notifications-updated', handleUpdate);
+
+            // Poll M-Pesa pending count
+            const fetchMpesaCount = async () => {
+                try {
+                    const { data } = await api.get('/mpesa/count');
+                    setMpesaPendingCount(data.count || 0);
+                } catch (_) {}
+            };
+            fetchMpesaCount();
+            const mpesaInterval = setInterval(fetchMpesaCount, 30000);
+            window.addEventListener('mpesa-updated', fetchMpesaCount);
+
             return () => {
                 clearInterval(interval);
+                clearInterval(mpesaInterval);
                 window.removeEventListener('notifications-updated', handleUpdate);
+                window.removeEventListener('mpesa-updated', fetchMpesaCount);
             };
         }
     }, [user]);
@@ -51,12 +67,13 @@ const Navbar = () => {
         { label: 'Debts', path: '/debts', icon: <Users size={18} /> },
         { label: 'Notifications', path: '/notifications', icon: <Bell size={18} /> },
         { label: 'AI Advisor', path: '/ai-advisor', icon: <Bot size={18} /> },
+        { label: 'M-Pesa Inbox', path: '/mpesa-review', icon: <Smartphone size={18} />, badge: mpesaPendingCount },
     ];
 
     return (
         <nav className="main-navbar" style={{
             marginBottom: '1rem',
-            padding: '0.5rem 0', 
+            padding: '0.85rem 0', // Increased vertical padding
             position: 'sticky',
             top: 0,
             zIndex: 1000,
@@ -70,12 +87,13 @@ const Navbar = () => {
                         src={logo}
                         alt="CashFlowly Logo"
                         className="navbar-logo"
+                        style={{ width: '38px', height: '38px' }} // Slightly larger logo
                     />
-                    <div style={{ display: 'flex', flexDirection: 'column' }}>
-                        <div style={{ fontWeight: '900', fontSize: '1.2rem', color: '#1e293b', letterSpacing: '-0.03em', lineHeight: '1', display: 'flex', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                        <div style={{ fontWeight: '900', fontSize: '1.25rem', color: '#1e293b', letterSpacing: '-0.03em', lineHeight: '1', display: 'flex', alignItems: 'center' }}>
                             CASHFLOWLY
                         </div>
-                        <span style={{ fontSize: '0.55rem', fontWeight: '800', color: '#94a3b8', letterSpacing: '0.2em', marginTop: '2px' }}>
+                        <span style={{ fontSize: '0.6rem', fontWeight: '800', color: '#94a3b8', letterSpacing: '0.2em', lineHeight: '1' }}>
                             THE 50, 30, 20 RULE
                         </span>
                     </div>
@@ -121,6 +139,25 @@ const Navbar = () => {
                                         {unreadCount}
                                     </span>
                                 )}
+                                {item.badge > 0 && item.label !== 'Notifications' && (
+                                    <span style={{
+                                        marginLeft: '0.4rem',
+                                        background: '#059669',
+                                        color: '#fff',
+                                        fontSize: '0.55rem',
+                                        fontWeight: '900',
+                                        padding: '1px 6px',
+                                        borderRadius: '10px',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        boxShadow: '0 2px 4px rgba(5,150,105,0.3)',
+                                        verticalAlign: 'middle',
+                                        animation: 'pulse 2s infinite'
+                                    }}>
+                                        {item.badge}
+                                    </span>
+                                )}
                             </Link>
                         );
                     })}
@@ -147,14 +184,41 @@ const Navbar = () => {
                     </div>
                 </div>
 
-                {/* Mobile Toggle */}
-                <button
-                    className="mobile-toggle"
-                    onClick={() => setIsOpen(!isOpen)}
-                    style={{ background: 'transparent', border: 'none', color: '#0f172a', cursor: 'pointer', display: 'none' }}
-                >
-                    {isOpen ? <X size={24} /> : <Menu size={24} />}
-                </button>
+                {/* Mobile Toggle & Notifications */}
+                <div className="mobile-only-flex" style={{ display: 'none', alignItems: 'center', gap: '1.25rem', paddingRight: '0.25rem' }}>
+                    <Link to="/notifications" style={{ position: 'relative', color: '#475569', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0.2rem' }}>
+                        <Bell size={24} color="#0f172a" />
+                        {unreadCount > 0 && (
+                            <span style={{
+                                position: 'absolute',
+                                top: '-4px',
+                                right: '-6px',
+                                background: '#ef4444',
+                                color: '#fff',
+                                fontSize: '0.6rem',
+                                fontWeight: '900',
+                                minWidth: '18px',
+                                height: '18px',
+                                borderRadius: '10px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                padding: '0 4px',
+                                border: '2px solid #fff',
+                                boxShadow: '0 2px 4px rgba(239, 68, 68, 0.3)'
+                            }}>
+                                {unreadCount > 9 ? '9+' : unreadCount}
+                            </span>
+                        )}
+                    </Link>
+                    <button
+                        className="mobile-toggle"
+                        onClick={() => setIsOpen(!isOpen)}
+                        style={{ background: 'transparent', border: 'none', color: '#0f172a', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '0.2rem' }}
+                    >
+                        {isOpen ? <X size={26} /> : <Menu size={26} />}
+                    </button>
+                </div>
             </div>
 
             {/* Mobile Popover Menu - ONLY rendered when open */}
@@ -249,9 +313,10 @@ const Navbar = () => {
 
             <style>{`
                 @media (max-width: 768px) {
+                    .main-navbar { padding: 1.15rem 0 !important; }
                     .nav-links { display: none !important; }
                     .mobile-toggle { display: block !important; }
-                    .mobile-only-flex { display: flex !important; align-items: center; gap: 0.5rem; }
+                    .mobile-only-flex { display: flex !important; align-items: center; gap: 1.5rem !important; }
                 }
             `}</style>
             <ProfileDrawer isOpen={isProfileOpen} onClose={() => setIsProfileOpen(false)} />

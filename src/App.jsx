@@ -11,6 +11,8 @@ import Savings from './pages/Savings';
 import Debts from './pages/Debts';
 import Notifications from './pages/Notifications';
 import CashFlowlyGPT from './pages/CashFlowlyGPT';
+import MpesaReview from './pages/MpesaReview';
+import MpesaShare from './pages/MpesaShare';
 import Navbar from './components/Navbar';
 import './index.css';
 
@@ -29,6 +31,7 @@ function App() {
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/share-mpesa" element={<MpesaShare />} />
             <Route
               path="/*"
               element={
@@ -45,6 +48,7 @@ function App() {
                         <Route path="/debts" element={<Debts />} />
                         <Route path="/notifications" element={<Notifications />} />
                         <Route path="/ai-advisor" element={<CashFlowlyGPT />} />
+                        <Route path="/mpesa-review" element={<MpesaReview />} />
                       </Routes>
                     </main>
                   </>
