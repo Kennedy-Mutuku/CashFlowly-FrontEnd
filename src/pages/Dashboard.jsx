@@ -5,6 +5,7 @@ import { Pie, Bar } from 'react-chartjs-2';
 import { Share2, TrendingUp, TrendingDown, Wallet, ArrowUpRight, ArrowDownLeft, Download, Upload, CreditCard, LayoutDashboard, ChevronLeft, ChevronRight, Smartphone, Save, PlusCircle, MinusCircle, X, Calendar, FileText, Loader, Lightbulb, Target, AlertCircle } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { parseMpesaMessage } from '../utils/mpesaParser';
+import smsService from '../services/smsService';
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title);
 
@@ -20,6 +21,7 @@ const Dashboard = () => {
     const [report, setReport] = useState(null);
     const [month, setMonth] = useState(new Date().toISOString().slice(0, 7));
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
     const [mpesaText, setMpesaText] = useState('');
     const [parsedData, setParsedData] = useState(null);
     const [activeSlide, setActiveSlide] = useState(0);
@@ -30,6 +32,7 @@ const Dashboard = () => {
     const [exportingPdf, setExportingPdf] = useState(false);
     const [showConfetti, setShowConfetti] = useState(false);
     const [activeAlerts, setActiveAlerts] = useState([]);
+    const [autoDetectedData, setAutoDetectedData] = useState(null); // For the automated popup
 
     // Inline Cash-In form state
     const [showCashInForm, setShowCashInForm] = useState(false);
@@ -100,10 +103,21 @@ const Dashboard = () => {
 
     const fetchReport = async () => {
         try {
-            const { data } = await api.get(`/reports/monthly?month=${month}`);
-            setReport(data);
+            setLoading(true);
+            setError(null);
+            // Add a small artificial delay so the user sees the "Initializing" transition
+            const delay = new Promise(resolve => setTimeout(resolve, 500));
+            const [response] = await Promise.all([
+                api.get(`/reports/monthly?month=${month}`),
+                delay
+            ]);
+            setReport(response.data);
         } catch (err) {
             console.error('Failed to fetch report', err);
+            const msg = err.response?.data?.message || err.message || 'Unknown connection error';
+            setError(`ERROR: ${msg}`);
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -180,6 +194,18 @@ const Dashboard = () => {
         fetchReport();
         fetchAiAdvice();
         fetchAlerts();
+
+        // Initialize Native SMS Listener
+        smsService.initialize((parsed) => {
+            console.log('Automated Sync: Transaction detected!', parsed);
+            // If it's an expense, we set category to empty to force a professional choice
+            if (parsed.type === 'expense') {
+                parsed.category = '';
+            }
+            setAutoDetectedData(parsed);
+        });
+
+        return () => smsService.stop();
     }, [month]);
 
 
@@ -281,7 +307,6 @@ const Dashboard = () => {
             }
 
             fetchReport();
-            setMpesaText('');
             setParsedData(null);
         } catch (err) {
             console.error(err);
@@ -293,6 +318,95 @@ const Dashboard = () => {
                 alert('⚠️ This transaction has already been recorded in your history.');
             } else {
                 alert('❌ Failed to sync transaction. Please check all fields.');
+            }
+        } finally {
+            setSyncing(false);
+        }
+    };
+
+    const handleAutoSync = async () => {
+        if (!autoDetectedData) return;
+        setSyncing(true);
+
+        try {
+            const timestamp = autoDetectedData.time ? `${autoDetectedData.date}T${autoDetectedData.time}` : autoDetectedData.date;
+
+            if (autoDetectedData.type === 'savings') {
+                await api.post('/savings', {
+                    amount: autoDetectedData.amount,
+                    type: 'deposit',
+                    date: timestamp,
+                    title: `Sent to Ziidi`,
+                    transactionId: autoDetectedData.transactionId,
+                    partner: 'Ziidi'
+                });
+                await api.post('/expenses', {
+                    title: `Sent to Ziidi (Savings)`,
+                    amount: autoDetectedData.amount,
+                    date: timestamp,
+                    category: 'Assets',
+                    paymentMethod: 'M-PESA',
+                    transactionId: autoDetectedData.transactionId,
+                    description: `Automated dual-recording for Ziidi deposit.`
+                });
+                showToast(autoDetectedData.amount, 'Ziidi Savings', 'savings');
+            } else if (autoDetectedData.type === 'savings-withdrawal') {
+                await api.post('/savings', {
+                    amount: autoDetectedData.amount,
+                    type: 'withdrawal',
+                    date: timestamp,
+                    title: `Withdrawn from Ziidi`,
+                    transactionId: autoDetectedData.transactionId,
+                    partner: 'Ziidi'
+                });
+                await api.post('/income', {
+                    title: `Ziidi Withdrawal`,
+                    source: 'Ziidi',
+                    amount: autoDetectedData.amount,
+                    date: timestamp,
+                    paymentMethod: 'M-PESA',
+                    transactionId: autoDetectedData.transactionId,
+                    description: `Automated dual-recording for Ziidi withdrawal.`
+                });
+                showToast(autoDetectedData.amount, 'Main Wallet', 'savings-withdrawal');
+            } else {
+                const payload = {
+                    title: autoDetectedData.title,
+                    amount: autoDetectedData.amount,
+                    date: timestamp,
+                    description: autoDetectedData.description || '',
+                    paymentMethod: 'M-PESA',
+                    transactionId: autoDetectedData.transactionId,
+                };
+
+                if (autoDetectedData.type === 'income') {
+                    payload.source = autoDetectedData.partner;
+                } else {
+                    if (!autoDetectedData.category) {
+                        alert('Please select a category for this transaction.');
+                        setSyncing(false);
+                        return;
+                    }
+                    payload.category = autoDetectedData.category;
+                }
+
+                const endpoint = autoDetectedData.type === 'income' ? '/income' : '/expenses';
+                await api.post(endpoint, payload);
+                showToast(
+                    autoDetectedData.amount,
+                    autoDetectedData.type === 'income' ? autoDetectedData.partner : autoDetectedData.title,
+                    autoDetectedData.type
+                );
+            }
+
+            fetchReport();
+            setAutoDetectedData(null);
+        } catch (err) {
+            console.error(err);
+            if (err.response?.status === 400) {
+                alert('⚠️ This transaction has already been recorded.');
+            } else {
+                alert('❌ Failed to sync transaction.');
             }
         } finally {
             setSyncing(false);
@@ -424,7 +538,36 @@ const Dashboard = () => {
     };
 
 
-    if (!report) return (
+    if (error) return (
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh', flexDirection: 'column', gap: '1.5rem', padding: '2rem', textAlign: 'center' }}>
+            <div style={{ background: '#fef2f2', padding: '2rem', borderRadius: '16px', border: '1px solid #fecaca', maxWidth: '400px' }}>
+                <AlertCircle size={48} color="#dc2626" style={{ marginBottom: '1rem' }} />
+                <h3 style={{ fontWeight: '800', color: '#991b1b', marginBottom: '0.5rem' }}>CONNECTION ERROR</h3>
+                <p style={{ fontWeight: '500', color: '#b91c1c', fontSize: '0.85rem', marginBottom: '1.5rem' }}>{error}</p>
+                <button 
+                    onClick={fetchReport}
+                    style={{ 
+                        background: '#0f172a', 
+                        color: 'white', 
+                        border: 'none', 
+                        padding: '0.75rem 1.5rem', 
+                        borderRadius: '8px', 
+                        fontWeight: '800', 
+                        fontSize: '0.75rem', 
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        margin: '0 auto'
+                    }}
+                >
+                    <LayoutDashboard size={16} /> RETRY CONNECTION
+                </button>
+            </div>
+        </div>
+    );
+
+    if (loading || !report) return (
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh', flexDirection: 'column', gap: '1rem' }}>
             <div className="spinner" style={{ width: '40px', height: '40px', border: '4px solid #f3f3f3', borderTop: '4px solid #0f172a', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
             <p style={{ fontWeight: '700', color: '#64748b', fontSize: '0.85rem' }}>INITIALIZING FINANCIAL ANALYTICS...</p>
@@ -1188,6 +1331,111 @@ const Dashboard = () => {
                     )}
                 </div>
             </div>
+
+            {/* Smart Automated Sync Popup Modal */}
+            {autoDetectedData && (
+                <div style={{
+                    position: 'fixed', inset: 0, zIndex: 10001,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    background: 'rgba(15, 23, 42, 0.75)',
+                    backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
+                    padding: '1.5rem', animation: 'fadeIn 0.3s ease'
+                }}>
+                    <div style={{
+                        background: '#fff', width: '100%', maxWidth: '440px',
+                        borderRadius: '24px', overflow: 'hidden',
+                        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+                        animation: 'toastIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)'
+                    }}>
+                        {/* Header */}
+                        <div style={{ background: '#0f172a', padding: '1.5rem', textAlign: 'center', position: 'relative' }}>
+                            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
+                                <div style={{ background: '#1e293b', padding: '0.75rem', borderRadius: '12px' }}>
+                                    <Smartphone size={24} color="#38bdf8" />
+                                </div>
+                            </div>
+                            <h2 style={{ color: '#fff', fontSize: '1.25rem', fontWeight: '900', margin: 0 }}>TRANSACTION DETECTED!</h2>
+                            <p style={{ color: '#94a3b8', fontSize: '0.75rem', fontWeight: '700', marginTop: '0.25rem' }}>M-PESA AUTOMATION ACTIVE</p>
+                        </div>
+
+                        {/* Body */}
+                        <div style={{ padding: '2rem' }}>
+                            <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+                                <span style={{ fontSize: '0.7rem', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                                    {autoDetectedData.type.replace('-', ' ')}
+                                </span>
+                                <div style={{ fontSize: '2.5rem', fontWeight: '900', color: '#0f172a', letterSpacing: '-0.03em', margin: '0.25rem 0' }}>
+                                    Ksh {parseFloat(autoDetectedData.amount).toLocaleString()}
+                                </div>
+                                <p style={{ fontSize: '0.9rem', color: '#475569', fontWeight: '600', margin: 0 }}>
+                                    {autoDetectedData.partner || autoDetectedData.title}
+                                </p>
+                            </div>
+
+                            {/* Category Selection for Expenses */}
+                            {autoDetectedData.type === 'expense' && (
+                                <div style={{ marginBottom: '2rem' }}>
+                                    <label style={{ fontSize: '0.65rem', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', display: 'block', marginBottom: '0.5rem' }}>
+                                        SELECT CATEGORY
+                                    </label>
+                                    <select
+                                        value={autoDetectedData.category || ''}
+                                        onChange={(e) => setAutoDetectedData({ ...autoDetectedData, category: e.target.value })}
+                                        style={{
+                                            width: '100%', padding: '1rem', background: '#f8fafc',
+                                            border: autoDetectedData.category ? '2px solid #e2e8f0' : '2px solid #38bdf8',
+                                            borderRadius: '12px', fontSize: '0.9rem', fontWeight: '700',
+                                            color: '#0f172a', cursor: 'pointer', outline: 'none',
+                                            transition: 'border-color 0.2s ease'
+                                        }}
+                                    >
+                                        <option value="" disabled>Select a category...</option>
+                                        {[
+                                            'Housing & Utilities',
+                                            'Food & Household',
+                                            'Transportation',
+                                            'Health & Personal Care',
+                                            'Financial Obligations',
+                                            'Lifestyle & Entertainment',
+                                            'Assets',
+                                            'Miscellaneous',
+                                        ].map(cat => (
+                                            <option key={cat} value={cat}>{cat}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
+
+                            {/* Actions */}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                <button
+                                    onClick={handleAutoSync}
+                                    disabled={syncing || (autoDetectedData.type === 'expense' && !autoDetectedData.category)}
+                                    style={{
+                                        width: '100%', padding: '1.1rem', background: '#0f172a', color: '#fff',
+                                        border: 'none', borderRadius: '14px', fontWeight: '900', fontSize: '0.85rem',
+                                        cursor: 'pointer', transition: 'transform 0.2s ease, opacity 0.2s ease',
+                                        opacity: (syncing || (autoDetectedData.type === 'expense' && !autoDetectedData.category)) ? 0.7 : 1,
+                                        transform: syncing ? 'scale(0.98)' : 'scale(1)'
+                                    }}
+                                >
+                                    {syncing ? 'SYNCING DATA...' : 'SYNC TO RECORDS'}
+                                </button>
+                                <button
+                                    onClick={() => setAutoDetectedData(null)}
+                                    style={{
+                                        width: '100%', padding: '1rem', background: 'transparent', color: '#94a3b8',
+                                        border: 'none', borderRadius: '14px', fontWeight: '800', fontSize: '0.8rem',
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    IGNORE TRANSACTION
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
