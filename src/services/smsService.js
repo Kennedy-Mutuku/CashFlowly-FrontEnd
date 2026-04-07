@@ -28,11 +28,14 @@ class SMSService {
             }
 
             // Check if permissions are already granted
-            const status = await MpesaListener.checkPermissions();
+            let status = await MpesaListener.checkPermissions();
             if (!status.granted) {
-                console.log('SMS Automation: SMS permissions not granted. This feature requires READ_SMS permission.');
-                // Note: The app should ideally show a professional prompt explaining why 
-                // this permission is needed before the system dialog appears.
+                console.log('SMS Automation: SMS permissions not granted. Requesting...');
+                status = await MpesaListener.requestPermissions();
+                if (!status.granted) {
+                     console.log('SMS Automation: SMS permissions denied by user.');
+                     return;
+                }
             }
 
             // Add the listener for the 'mpesaReceived' event from the native plugin

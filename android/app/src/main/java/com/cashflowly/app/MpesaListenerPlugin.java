@@ -1,5 +1,6 @@
 package com.cashflowly.app;
 
+import android.Manifest;
 import android.content.Context;
 import android.content.IntentFilter;
 import android.os.Build;
@@ -8,11 +9,21 @@ import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
+import com.getcapacitor.annotation.Permission;
+import com.getcapacitor.annotation.PermissionCallback;
+import com.getcapacitor.PermissionState;
 
-@CapacitorPlugin(name = "MpesaListener")
+@CapacitorPlugin(
+    name = "MpesaListener",
+    permissions = {
+        @Permission(strings = { Manifest.permission.READ_SMS }, alias = "readSms"),
+        @Permission(strings = { Manifest.permission.RECEIVE_SMS }, alias = "receiveSms"),
+    }
+)
 public class MpesaListenerPlugin extends Plugin {
 
     private SmsReceiver smsReceiver;
+    private boolean receiverRegistered = false;
 
     @Override
     public void load() {
@@ -25,21 +36,46 @@ public class MpesaListenerPlugin extends Plugin {
                 notifyListeners("mpesaReceived", ret);
             }
         });
+    }
 
-        // Professional Dynamic Registration for Android 14+
+    private void registerSmsReceiver() {
+        if (receiverRegistered) return;
         IntentFilter filter = new IntentFilter("android.provider.Telephony.SMS_RECEIVED");
+        filter.setPriority(999);
         if (Build.VERSION.SDK_INT >= 34) {
             getContext().registerReceiver(smsReceiver, filter, Context.RECEIVER_EXPORTED);
         } else {
             getContext().registerReceiver(smsReceiver, filter);
         }
+        receiverRegistered = true;
     }
 
     @PluginMethod
     public void checkPermissions(PluginCall call) {
-        // Handy method to check if the app has SMS permissions
         JSObject ret = new JSObject();
-        ret.put("granted", getContext().checkSelfPermission(android.Manifest.permission.READ_SMS) == android.content.pm.PackageManager.PERMISSION_GRANTED);
+        boolean readGranted = getPermissionState("readSms") == PermissionState.GRANTED;
+        boolean receiveGranted = getPermissionState("receiveSms") == PermissionState.GRANTED;
+        ret.put("granted", readGranted && receiveGranted);
+        if (readGranted && receiveGranted) {
+            registerSmsReceiver();
+        }
+        call.resolve(ret);
+    }
+
+    @PluginMethod
+    public void requestPermissions(PluginCall call) {
+        requestAllPermissions(call, "permissionsCallback");
+    }
+
+    @PermissionCallback
+    private void permissionsCallback(PluginCall call) {
+        JSObject ret = new JSObject();
+        boolean granted = getPermissionState("readSms") == PermissionState.GRANTED
+                       && getPermissionState("receiveSms") == PermissionState.GRANTED;
+        ret.put("granted", granted);
+        if (granted) {
+            registerSmsReceiver();
+        }
         call.resolve(ret);
     }
 }

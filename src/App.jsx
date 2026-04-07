@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Login from './pages/Login';
@@ -14,6 +14,9 @@ import CashFlowlyGPT from './pages/CashFlowlyGPT';
 import MpesaReview from './pages/MpesaReview';
 import MpesaShare from './pages/MpesaShare';
 import Navbar from './components/Navbar';
+import MpesaToast from './components/MpesaToast';
+import smsService from './services/smsService';
+import api from './services/api';
 import './index.css';
 
 const ProtectedRoute = ({ children }) => {
@@ -23,41 +26,97 @@ const ProtectedRoute = ({ children }) => {
   return children;
 };
 
+/** Inner component — lives inside AuthProvider so it can read `user` */
+function AppInner() {
+  const { user } = useAuth();
+  const [mpesaToast, setMpesaToast] = useState(null); // { amount, title, type }
+  const smsInitialised = useRef(false);
+
+  useEffect(() => {
+    if (!user || smsInitialised.current) return;
+    smsInitialised.current = true;
+
+    smsService.initialize(async (parsed) => {
+      try {
+        // Send to backend — creates a PendingTransaction in the database
+        await api.post('/mpesa/native-sms', {
+          message: parsed,
+        });
+
+        // Show popup toast so user can immediately categorise
+        setMpesaToast({
+          amount: parsed.amount,
+          title: parsed.title,
+          type: parsed.type,
+        });
+
+        // Refresh M-Pesa inbox badge in Navbar
+        window.dispatchEvent(new Event('mpesa-updated'));
+      } catch (err) {
+        console.error('[MpesaToast] Failed to save SMS transaction:', err.message);
+        // Still show the toast even if backend save failed
+        setMpesaToast({
+          amount: parsed.amount,
+          title: parsed.title,
+          type: parsed.type,
+        });
+      }
+    });
+
+    return () => {
+      smsService.stop();
+      smsInitialised.current = false;
+    };
+  }, [user]);
+
+  return (
+    <Router>
+      <div className="app">
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/share-mpesa" element={<MpesaShare />} />
+          <Route
+            path="/*"
+            element={
+              <ProtectedRoute>
+                <>
+                  <Navbar />
+                  <main className="container">
+                    <Routes>
+                      <Route path="/" element={<Dashboard />} />
+                      <Route path="/income" element={<Income />} />
+                      <Route path="/expenses" element={<Expenses />} />
+                      <Route path="/budget" element={<Budget />} />
+                      <Route path="/savings" element={<Savings />} />
+                      <Route path="/debts" element={<Debts />} />
+                      <Route path="/notifications" element={<Notifications />} />
+                      <Route path="/ai-advisor" element={<CashFlowlyGPT />} />
+                      <Route path="/mpesa-review" element={<MpesaReview />} />
+                    </Routes>
+                  </main>
+                </>
+              </ProtectedRoute>
+            }
+          />
+        </Routes>
+
+        {/* Global M-Pesa SMS popup — shows on any page when SMS arrives */}
+        {mpesaToast && (
+          <MpesaToast
+            transaction={mpesaToast}
+            onClose={() => setMpesaToast(null)}
+          />
+        )}
+      </div>
+    </Router>
+  );
+}
+
 function App() {
   return (
     <AuthProvider>
-      <Router>
-        <div className="app">
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/share-mpesa" element={<MpesaShare />} />
-            <Route
-              path="/*"
-              element={
-                <ProtectedRoute>
-                  <>
-                    <Navbar />
-                    <main className="container">
-                      <Routes>
-                        <Route path="/" element={<Dashboard />} />
-                        <Route path="/income" element={<Income />} />
-                        <Route path="/expenses" element={<Expenses />} />
-                        <Route path="/budget" element={<Budget />} />
-                        <Route path="/savings" element={<Savings />} />
-                        <Route path="/debts" element={<Debts />} />
-                        <Route path="/notifications" element={<Notifications />} />
-                        <Route path="/ai-advisor" element={<CashFlowlyGPT />} />
-                        <Route path="/mpesa-review" element={<MpesaReview />} />
-                      </Routes>
-                    </main>
-                  </>
-                </ProtectedRoute>
-              }
-            />
-          </Routes>
-        </div>
-      </Router>
+      <AppInner />
     </AuthProvider>
   );
 }
